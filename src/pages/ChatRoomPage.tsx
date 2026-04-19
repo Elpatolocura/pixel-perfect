@@ -14,6 +14,7 @@ import {
   Dialog,
   DialogContent,
   DialogClose,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Popover,
@@ -27,9 +28,30 @@ import {
   ContextMenuTrigger,
   ContextMenuSeparator,
 } from "@/components/ui/context-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { toast } from 'sonner';
 
-const MessageBubble = ({ msg, openUserProfile, openImageViewer, onDelete, onReply }: { msg: any, openUserProfile: (user: any) => void, openImageViewer: (images: string[], index: number) => void, onDelete: (id: number) => void, onReply: (msg: any) => void }) => {
+const MessageBubble = ({ 
+  msg, 
+  openUserProfile, 
+  openImageViewer, 
+  onDelete, 
+  onReply,
+  onScrollToMessage 
+}: { 
+  msg: any, 
+  openUserProfile: (user: any) => void, 
+  openImageViewer: (images: string[], index: number) => void, 
+  onDelete: (id: number) => void, 
+  onReply: (msg: any) => void,
+  onScrollToMessage: (id: number) => void
+}) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const CHAR_LIMIT = 200;
   
@@ -39,7 +61,10 @@ const MessageBubble = ({ msg, openUserProfile, openImageViewer, onDelete, onRepl
   const images = msg.images || (msg.image ? [msg.image] : []);
 
   return (
-    <div className={`flex w-full items-end gap-3.5 ${msg.isMe ? 'flex-row-reverse' : ''}`}>
+    <div 
+      id={`message-${msg.id}`}
+      className={`flex w-full items-end gap-3.5 transition-all duration-500 ${msg.isMe ? 'flex-row-reverse' : ''}`}
+    >
       {!msg.isMe && (
         <button 
           onClick={() => openUserProfile(msg)}
@@ -67,7 +92,13 @@ const MessageBubble = ({ msg, openUserProfile, openImageViewer, onDelete, onRepl
             }`}>
 
           {msg.replyTo && (
-            <div className={`p-2.5 m-2 mb-0 rounded-xl text-xs border-l-[3px] overflow-hidden flex flex-col min-w-0 ${msg.isMe ? 'bg-slate-800/50 border-slate-400' : 'bg-slate-50 border-primary'}`}>
+            <div 
+              onClick={(e) => {
+                e.stopPropagation();
+                onScrollToMessage(msg.replyTo.id);
+              }}
+              className={`p-2.5 m-2 mb-0 rounded-xl text-xs border-l-[3px] overflow-hidden flex flex-col min-w-0 cursor-pointer hover:opacity-80 transition-opacity ${msg.isMe ? 'bg-slate-800/50 border-slate-400' : 'bg-slate-50 border-primary'}`}
+            >
               <span className={`font-bold mb-0.5 truncate ${msg.isMe ? 'text-slate-300' : 'text-primary'}`}>
                 {msg.replyTo.user || (msg.replyTo.isMe ? 'Tú' : 'Usuario')}
               </span>
@@ -194,12 +225,19 @@ const ChatRoomPage = () => {
   const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState<{url: string, type: string}[]>([]);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [isFollowingUser, setIsFollowingUser] = useState(false);
   const [viewerData, setViewerData] = useState<{ images: string[], index: number } | null>(null);
   const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (selectedUser) {
+      setIsFollowingUser(false); // Reset when opening a new user profile
+    }
+  }, [selectedUser]);
 
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
@@ -269,6 +307,15 @@ const ChatRoomPage = () => {
       stats: { events: 54, followers: "1.2k" },
       tags: ["Events", "Networking", "Culture"]
     },
+    {
+      id: 4,
+      user: "Tú",
+      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
+      text: "¡Excelente! Yo también voy.",
+      time: "14:15",
+      isMe: true,
+      replyTo: { id: 1, user: "Ana", text: "¡Hola a todos! ¿A qué hora nos vemos?" }
+    }
   ]);
 
   // Scroll to bottom whenever messages update
@@ -352,6 +399,20 @@ const ChatRoomPage = () => {
     setSelectedUser(user);
   };
 
+  const scrollToMessage = (msgId: number) => {
+    const element = document.getElementById(`message-${msgId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Añadimos un efecto de resaltado temporal
+      element.classList.add('bg-primary/10', 'scale-[1.02]', 'rounded-3xl');
+      setTimeout(() => {
+        element.classList.remove('bg-primary/10', 'scale-[1.02]', 'rounded-3xl');
+      }, 2000);
+    } else {
+      toast.error('No se pudo encontrar el mensaje original');
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-[#F8FAFC] overflow-hidden animate-fade-in">
       {/* Chat Header */}
@@ -433,6 +494,7 @@ const ChatRoomPage = () => {
             openImageViewer={(imgs, idx) => setViewerData({ images: imgs, index: idx })} 
             onDelete={handleDeleteMessage}
             onReply={setReplyingTo}
+            onScrollToMessage={scrollToMessage}
           />
         ))}
       </div>
@@ -587,18 +649,50 @@ const ChatRoomPage = () => {
       </footer>
 
       {/* Profile Modal */}
-      <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
-        <DialogContent className="sm:max-w-[320px] rounded-[40px] p-0 overflow-hidden border-none shadow-2xl">
+      <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
+        <DialogContent className="sm:max-w-[320px] rounded-[40px] p-0 overflow-hidden border-none shadow-2xl focus:outline-none">
+          <DialogTitle className="sr-only">Perfil de {selectedUser?.user || 'Usuario'}</DialogTitle>
           <div className="relative">
             <div className="h-32 bg-slate-900 relative">
               <DialogClose className="absolute top-4 right-4 p-2 bg-white/10 backdrop-blur-md rounded-xl text-white hover:bg-white/20 transition-all">
                 <X className="w-4 h-4" />
               </DialogClose>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="absolute top-4 left-4 p-2 bg-white/10 backdrop-blur-md rounded-xl text-white hover:bg-white/20 transition-all">
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48 rounded-2xl">
+                  <DropdownMenuItem className="gap-2 cursor-pointer font-medium" onClick={() => {
+                    navigator.clipboard.writeText(window.location.origin + '/user/' + selectedUser?.id);
+                    toast.success('Enlace de perfil copiado');
+                  }}>
+                    <Forward className="w-4 h-4 text-slate-400" /> Compartir Perfil
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-slate-50" />
+                  <DropdownMenuItem className="gap-2 cursor-pointer font-medium text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50" onClick={(e) => {
+                    e.preventDefault();
+                    toast.success('Usuario reportado correctamente');
+                    // Pequeño delay para que el dropdown cierre antes de desmontar el modal
+                    setTimeout(() => setSelectedUser(null), 100);
+                  }}>
+                    <ShieldAlert className="w-4 h-4" /> Reportar Usuario
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             
             <div className="px-6 pb-8 -mt-12 relative z-10 bg-white rounded-t-[40px]">
               <div className="flex justify-center">
-                <div className="w-24 h-24 rounded-[32px] border-4 border-white shadow-xl overflow-hidden bg-slate-100 -mt-12">
+                <div 
+                  className="w-24 h-24 rounded-[32px] border-4 border-white shadow-xl overflow-hidden bg-slate-100 -mt-12 cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => {
+                    if (selectedUser?.avatar) {
+                      setViewerData({ images: [selectedUser.avatar], index: 0 });
+                    }
+                  }}
+                >
                   <img src={selectedUser?.avatar} alt={selectedUser?.user} className="w-full h-full object-cover" />
                 </div>
               </div>
@@ -629,8 +723,29 @@ const ChatRoomPage = () => {
                 ))}
               </div>
               <div className="mt-8 flex gap-3">
-                <Button className="flex-1 rounded-2xl bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest h-12 shadow-lg shadow-slate-900/20">Seguir</Button>
-                <Button variant="outline" className="w-12 h-12 rounded-2xl border-slate-100 flex items-center justify-center p-0"><Instagram className="w-5 h-5 text-slate-900" /></Button>
+                <Button 
+                  onClick={() => {
+                    setIsFollowingUser(!isFollowingUser);
+                    toast.success(isFollowingUser ? 'Dejaste de seguir a este usuario' : '¡Ahora sigues a este usuario!');
+                  }}
+                  className={`flex-1 rounded-2xl font-black uppercase text-[10px] tracking-widest h-12 shadow-lg transition-all ${
+                    isFollowingUser 
+                      ? 'bg-slate-100 text-slate-600 shadow-none hover:bg-slate-200' 
+                      : 'bg-slate-900 text-white shadow-slate-900/20 hover:bg-slate-800'
+                  }`}
+                >
+                  {isFollowingUser ? 'Siguiendo' : 'Seguir'}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSelectedUser(null);
+                    toast.success(`Iniciando chat privado con ${selectedUser?.user}...`);
+                  }} 
+                  className="w-12 h-12 rounded-2xl border-slate-100 flex items-center justify-center p-0 hover:bg-slate-50"
+                >
+                  <MessageCircle className="w-5 h-5 text-slate-900" />
+                </Button>
               </div>
             </div>
           </div>

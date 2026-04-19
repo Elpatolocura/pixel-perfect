@@ -141,7 +141,7 @@ const PremiumPage = () => {
                       if (plan.id === 'Basic') {
                         toast.info('Ya tienes el plan básico');
                       } else {
-                        navigate(`/checkout/${plan.id}`);
+                        navigate(`/subscribe/${plan.id}`);
                       }
                     }}
                     className={`w-full h-12 rounded-2xl font-black shadow-lg shadow-black/5 transition-all active:scale-95 ${

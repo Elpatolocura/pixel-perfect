@@ -13,7 +13,13 @@ const BottomNav = () => {
     '/checkout',
     '/auth',
     '/onboarding',
-    '/chat/'
+    '/chat/',
+    '/settings',
+    '/premium',
+    '/subscribe',
+    '/my-events',
+    '/notifications',
+    '/ticket'
   ];
 
   // Check if current path starts with any of the hidden paths

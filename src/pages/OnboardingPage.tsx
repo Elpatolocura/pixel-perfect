@@ -43,12 +43,12 @@ const OnboardingPage = () => {
 
     if (user) {
       // Intentamos guardar los datos en la tabla profiles
-      const { error } = await supabase.from('profiles').update({
-        role: 'user', // Rol por defecto
+      const { error } = await supabase.from('profiles').upsert({
+        id: user.id,
+        role: 'user',
         preferences: selectedCategories,
-        // Aquí podríamos guardar el tipo de entrada si añadimos la columna, 
-        // por ahora lo manejaremos como metadatos o lo ignoramos si la tabla no tiene la columna
-      }).eq('id', user.id);
+        preferred_entry_type: entryType,
+      });
 
       if (error) {
         console.error('Error saving profile:', error);
@@ -87,11 +87,10 @@ const OnboardingPage = () => {
                   <button
                     key={option.id}
                     onClick={() => setEntryType(option.id as any)}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${
-                      entryType === option.id 
-                        ? 'border-primary bg-primary/5 ring-4 ring-primary/10' 
+                    className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${entryType === option.id
+                        ? 'border-primary bg-primary/5 ring-4 ring-primary/10'
                         : 'border-border bg-background hover:border-primary/50 text-muted-foreground'
-                    }`}
+                      }`}
                   >
                     <span className="text-xl">{option.emoji}</span>
                     <span className="font-bold text-xs">{option.label}</span>
@@ -113,11 +112,10 @@ const OnboardingPage = () => {
                   <button
                     key={category}
                     onClick={() => toggleCategory(category)}
-                    className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                      selectedCategories.includes(category)
+                    className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${selectedCategories.includes(category)
                         ? 'border-primary bg-primary/10 text-primary font-bold shadow-sm'
                         : 'border-border bg-background text-muted-foreground'
-                    }`}
+                      }`}
                   >
                     {selectedCategories.includes(category) && (
                       <div className="absolute top-1 right-1 bg-primary text-white rounded-full p-0.5">
@@ -132,8 +130,8 @@ const OnboardingPage = () => {
             </div>
           </CardContent>
           <CardFooter className="p-6 bg-muted/30 border-t border-border">
-            <Button 
-              className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20" 
+            <Button
+              className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20"
               onClick={handleComplete}
               disabled={loading || selectedCategories.length < 3}
             >

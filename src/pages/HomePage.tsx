@@ -1,19 +1,23 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, Bell, MapPin, Calendar, Users, 
   Music, Utensils, Palette, ChevronRight, 
-  Star, Heart, LayoutGrid, Sparkles
+  Star, Heart, LayoutGrid, Sparkles, Loader2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 
 const HomePage = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userName, setUserName] = useState('Invitado');
 
   const categories = [
     { name: 'Todos', icon: <LayoutGrid className="w-4 h-4" /> },
@@ -22,43 +26,51 @@ const HomePage = () => {
     { name: 'Gastronomía', icon: <Utensils className="w-4 h-4" /> },
   ];
 
-  const allEvents = [
-    {
-      id: 1,
-      title: "Festival de Jazz en el Parque",
-      category: "Música",
-      date: "vie, 24 abr · 20:00",
-      price: "$15",
-      attendees: 142,
-      image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&auto=format&fit=crop&q=60"
-    },
-    {
-      id: 2,
-      title: "Workshop de Pintura Óleo",
-      category: "Arte",
-      date: "sáb, 25 abr · 10:00",
-      price: "$25",
-      attendees: 45,
-      image: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800&auto=format&fit=crop&q=60"
-    },
-    {
-      id: 3,
-      title: "Ruta del Taco Gourmet",
-      category: "Gastronomía",
-      date: "dom, 26 abr · 12:00",
-      price: "$10",
-      attendees: 89,
-      image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&auto=format&fit=crop&q=60"
-    }
-  ];
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        // Fetch user profile
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .single();
+          
+          if (profile?.full_name) {
+            setUserName(profile.full_name.split(' ')[0]);
+          } else {
+            setUserName('Usuario');
+          }
+        }
+
+        // Fetch events
+        const { data: eventsData, error } = await supabase
+          .from('events')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        if (eventsData) setEvents(eventsData);
+      } catch (error: any) {
+        toast.error('Error al cargar la página');
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInitialData();
+  }, []);
 
   const filteredEvents = useMemo(() => {
-    return allEvents.filter(event => {
+    return events.filter(event => {
       const matchesCategory = selectedCategory === 'Todos' || event.category === selectedCategory;
       const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory, searchQuery, events]);
 
   const handleEventClick = (id: number) => {
     navigate(`/event/${id}`);
@@ -74,7 +86,7 @@ const HomePage = () => {
       <header className="px-6 pt-10 pb-6 flex justify-between items-start">
         <div className="space-y-1">
           <h1 className="text-[28px] font-black tracking-tight text-slate-900 leading-tight">
-            Hola, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-indigo-600">María</span> 👋
+            Hola, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-indigo-600">{userName}</span> 👋
           </h1>
           <p className="text-slate-500 text-[13px] font-bold tracking-wide">Descubre eventos increíbles cerca de ti</p>
         </div>
@@ -142,15 +154,36 @@ const HomePage = () => {
               >
                 <div className="relative h-48 overflow-hidden">
                   <img 
-                    src={event.image} 
+                    src={event.image || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800'} 
                     alt={event.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                   />
                   <div className="absolute top-4 right-4">
                     <button 
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        toast.success('¡Añadido a favoritos!');
+                        try {
+                          const { data: userData } = await supabase.auth.getUser();
+                          if (!userData.user) {
+                            toast.error('Inicia sesión para guardar favoritos');
+                            return;
+                          }
+                          const { error } = await supabase.from('favorites').insert({
+                            user_id: userData.user.id,
+                            event_id: event.id
+                          });
+                          if (error) {
+                            if (error.code === '23505') {
+                              toast.info('Este evento ya está en tus favoritos');
+                            } else {
+                              throw error;
+                            }
+                          } else {
+                            toast.success('¡Añadido a favoritos!');
+                          }
+                        } catch(err) {
+                          toast.error('Error al guardar en favoritos');
+                        }
                       }}
                       className="p-2.5 rounded-xl bg-white/20 backdrop-blur-md border border-white/20 text-white hover:bg-white hover:text-red-500 transition-all"
                     >
@@ -169,13 +202,15 @@ const HomePage = () => {
                     <h3 className="text-base font-black text-slate-900 leading-tight group-hover:text-primary transition-colors">
                       {event.title}
                     </h3>
-                    <span className="text-primary font-black text-sm">{event.price}</span>
+                    <span className="text-primary font-black text-sm">
+                      {event.price && event.price !== '0' && event.price !== 'Gratis' ? `$${event.price}` : 'Gratis'}
+                    </span>
                   </div>
                   
                   <div className="flex items-center gap-4 text-slate-400 text-xs font-bold">
                     <div className="flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5" />
-                      {event.date}
+                      {event.date} • {event.time}
                     </div>
                   </div>
 
@@ -186,7 +221,7 @@ const HomePage = () => {
                           <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-slate-200" />
                         ))}
                       </div>
-                      <span className="text-[10px] text-slate-400 font-bold">+{event.attendees} asistirán</span>
+                      <span className="text-[10px] text-slate-400 font-bold">+{event.attendees_count || 0} asistirán</span>
                     </div>
                     <Button 
                       size="sm" 
@@ -199,11 +234,33 @@ const HomePage = () => {
               </div>
             ))
           ) : (
-            <div className="py-12 text-center space-y-3">
-              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
-                <Search className="w-8 h-8 text-slate-200" />
+            <div className="py-20 text-center space-y-6 px-4 animate-in fade-in zoom-in-95 duration-500">
+              <div className="relative w-28 h-28 mx-auto">
+                <div className="absolute inset-0 bg-gradient-to-tr from-cyan-400 via-blue-500 to-indigo-600 rounded-[32px] rotate-3 opacity-20 animate-pulse"></div>
+                <div className="absolute inset-0 bg-gradient-to-bl from-cyan-400 via-blue-500 to-indigo-600 rounded-[32px] -rotate-3 flex items-center justify-center shadow-xl shadow-blue-500/30">
+                  <Search className="w-12 h-12 text-white" />
+                </div>
+                <div className="absolute -top-3 -right-3 bg-white text-blue-500 rounded-full p-2 shadow-lg animate-bounce">
+                  <Sparkles className="w-5 h-5" />
+                </div>
               </div>
-              <p className="text-slate-400 font-bold">No encontramos eventos para "{searchQuery}"</p>
+              <div>
+                <h3 className="font-black text-2xl text-slate-900 tracking-tight mb-2">¡Ups! No hay resultados</h3>
+                <p className="text-slate-500 text-[15px] font-medium leading-relaxed max-w-[260px] mx-auto">
+                  {searchQuery 
+                    ? `No pudimos encontrar eventos que coincidan con "${searchQuery}".` 
+                    : `No hay eventos disponibles en la categoría ${selectedCategory !== 'Todos' ? selectedCategory : ''} por ahora.`}
+                </p>
+              </div>
+              <button 
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedCategory('Todos');
+                }}
+                className="mt-4 px-8 py-4 bg-slate-900 text-white rounded-[20px] font-black text-sm uppercase tracking-widest shadow-xl shadow-slate-900/20 active:scale-95 transition-all hover:bg-primary hover:shadow-primary/30"
+              >
+                Ver todos los eventos
+              </button>
             </div>
           )}
         </div>

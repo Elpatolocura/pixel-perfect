@@ -26,6 +26,7 @@ import FavoritesPage from "@/pages/FavoritesPage";
 import ChatRoomPage from "@/pages/ChatRoomPage";
 import PremiumPage from "@/pages/PremiumPage";
 import CheckoutPage from "@/pages/CheckoutPage";
+import SubscriptionCheckoutPage from "@/pages/SubscriptionCheckoutPage";
 import LegalPage from "@/pages/LegalPage";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -51,7 +52,7 @@ const App = () => (
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/profile/edit" element={<EditProfilePage />} />
             <Route path="/premium" element={<PremiumPage />} />
-            <Route path="/checkout/:planId" element={<CheckoutPage />} />
+            <Route path="/subscribe/:planId" element={<SubscriptionCheckoutPage />} />
             <Route path="/terms" element={<LegalPage />} />
             <Route path="/create" element={<CreateEventPage />} />
             <Route path="/auth" element={<AuthPage />} />

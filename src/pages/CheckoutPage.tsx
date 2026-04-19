@@ -8,6 +8,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 
 const CheckoutPage = () => {
   const { id } = useParams();
@@ -24,9 +25,33 @@ const CheckoutPage = () => {
   const currentZone = zones.find(z => z.name === selectedZone) || zones[0];
   const total = currentZone.price * ticketCount;
 
-  const handlePurchase = () => {
-    toast.success('¡Compra realizada con éxito! Revisa tu email.');
-    setTimeout(() => navigate('/'), 2000);
+  const handlePurchase = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Debes iniciar sesión para comprar tickets');
+        navigate('/auth');
+        return;
+      }
+
+      const { error } = await supabase.from('tickets').insert({
+        user_id: user.id,
+        event_id: id,
+        zone: selectedZone,
+        quantity: ticketCount,
+        total_price: total,
+        status: 'active',
+        purchase_date: new Date().toISOString()
+      });
+
+      if (error) throw error;
+
+      toast.success('¡Compra realizada con éxito! Revisa tu email.');
+      setTimeout(() => navigate('/tickets'), 2000);
+    } catch (error: any) {
+      toast.error('Error al procesar la compra: ' + error.message);
+      console.error(error);
+    }
   };
 
   return (

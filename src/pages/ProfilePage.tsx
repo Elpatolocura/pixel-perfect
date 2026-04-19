@@ -10,18 +10,53 @@ const ProfilePage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    followers: 124,
+    following: 89,
+    tickets: 0,
+    favorites: 0,
+    created: 0
+  });
 
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      
+      if (currentUser) {
+        fetchProfileStats(currentUser.id);
+      }
       setLoading(false);
+    };
+
+    const fetchProfileStats = async (userId: string) => {
+      try {
+        // Tickets count
+        const { count: tickets } = await supabase.from('tickets').select('*', { count: 'exact', head: true }).eq('user_id', userId);
+        // Favorites count
+        const { count: favorites } = await supabase.from('favorites').select('*', { count: 'exact', head: true }).eq('user_id', userId);
+        // Created events count
+        const { count: created } = await supabase.from('events').select('*', { count: 'exact', head: true }).eq('organizer_id', userId);
+        
+        // Mocking followers for now as table might not be ready
+        setStats({
+          followers: 142,
+          following: 89,
+          tickets: tickets || 0,
+          favorites: favorites || 0,
+          created: created || 0
+        });
+      } catch (e) {
+        console.error("Error fetching stats", e);
+      }
     };
 
     checkUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) fetchProfileStats(session.user.id);
     });
 
     return () => subscription.unsubscribe();
@@ -63,10 +98,8 @@ const ProfilePage = () => {
 
 
   const menuItems = [
-    { icon: Ticket, label: 'Mis Tickets', count: mockTickets.length, path: '/tickets' },
-    { icon: Bell, label: 'Notificaciones', count: mockNotifications.filter(n => !n.read).length, path: '/notifications' },
-    { icon: Heart, label: 'Favoritos', count: mockEvents.filter(e => e.isFavorite).length, path: '/favorites' },
-    { icon: CalendarDays, label: 'Mis Eventos', count: 0, path: '/my-events' },
+    { icon: Ticket, label: 'Mis Tickets', count: stats.tickets, path: '/tickets' },
+    { icon: CalendarDays, label: 'Mis Eventos', count: stats.created, path: '/my-events' },
     { icon: Settings, label: 'Configuración', path: '/settings' },
   ];
 
@@ -103,23 +136,36 @@ const ProfilePage = () => {
                 </span>
               )}
             </div>
-            <p className="text-sm text-muted-foreground">{user.email}</p>
+            <p className="text-sm text-muted-foreground mb-2">{user.email}</p>
+            <div className="flex gap-4 mt-1">
+              <button onClick={() => toast.info('Ver seguidores')} className="flex items-center gap-1.5">
+                <span className="text-xs font-black text-slate-900">{stats.followers}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Seguidores</span>
+              </button>
+              <div className="w-1 h-1 bg-slate-200 rounded-full my-auto"></div>
+              <button onClick={() => toast.info('Ver seguidos')} className="flex items-center gap-1.5">
+                <span className="text-xs font-black text-slate-900">{stats.following}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Siguiendo</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mt-5">
-          <div className="bg-secondary/50 rounded-xl p-3 text-center border border-border/50">
-            <p className="text-lg font-bold text-foreground">{mockTickets.length}</p>
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Tickets</p>
-          </div>
-          <div className="bg-secondary/50 rounded-xl p-3 text-center border border-border/50">
-            <p className="text-lg font-bold text-foreground">{mockEvents.filter(e => e.isFavorite).length}</p>
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Favoritos</p>
-          </div>
-          <div className="bg-secondary/50 rounded-xl p-3 text-center border border-border/50">
-            <p className="text-lg font-bold text-foreground">0</p>
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Creados</p>
-          </div>
+        <div className="grid grid-cols-2 gap-3 mt-6">
+          <button 
+            onClick={() => navigate('/tickets')}
+            className="bg-slate-50 rounded-2xl p-4 text-center border border-slate-100 transition-all active:scale-95 hover:bg-slate-100"
+          >
+            <p className="text-xl font-black text-slate-900 leading-none mb-1">{stats.tickets}</p>
+            <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Tickets</p>
+          </button>
+          <button 
+            onClick={() => navigate('/my-events')}
+            className="bg-slate-50 rounded-2xl p-4 text-center border border-slate-100 transition-all active:scale-95 hover:bg-slate-100"
+          >
+            <p className="text-xl font-black text-slate-900 leading-none mb-1">{stats.created}</p>
+            <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Creados</p>
+          </button>
         </div>
       </div>
 
