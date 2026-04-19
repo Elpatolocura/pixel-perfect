@@ -16,6 +16,7 @@ const HomePage = () => {
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
   const [events, setEvents] = useState<any[]>([]);
+  const [userFavorites, setUserFavorites] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState('Invitado');
 
@@ -56,6 +57,19 @@ const HomePage = () => {
           .order('created_at', { ascending: false });
 
         if (error) throw error;
+        
+        // Fetch favorites if user logged in
+        if (user) {
+          const { data: favs } = await supabase
+            .from('favorites')
+            .select('event_id')
+            .eq('user_id', user.id);
+          
+          if (favs) {
+            setUserFavorites(new Set(favs.map(f => f.event_id)));
+          }
+        }
+
         if (eventsData) setEvents(eventsData);
       } catch (error: any) {
         toast.error('Error al cargar la página');
@@ -76,7 +90,48 @@ const HomePage = () => {
     });
   }, [selectedCategory, searchQuery, events]);
 
-  const handleEventClick = (id: number) => {
+  const toggleFavorite = async (e: React.MouseEvent, eventId: string) => {
+    e.stopPropagation();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Inicia sesión para guardar favoritos');
+        return;
+      }
+
+      if (userFavorites.has(eventId)) {
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('event_id', eventId);
+        
+        if (error) throw error;
+        
+        const newFavs = new Set(userFavorites);
+        newFavs.delete(eventId);
+        setUserFavorites(newFavs);
+        toast.success('Eliminado de favoritos');
+      } else {
+        const { error } = await supabase.from('favorites').insert({
+          user_id: user.id,
+          event_id: eventId
+        });
+        
+        if (error) throw error;
+        
+        const newFavs = new Set(userFavorites);
+        newFavs.add(eventId);
+        setUserFavorites(newFavs);
+        toast.success('¡Añadido a favoritos!');
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al actualizar favoritos');
+    }
+  };
+
+  const handleEventClick = (id: string) => {
     navigate(`/event/${id}`);
   };
 
@@ -164,34 +219,14 @@ const HomePage = () => {
                   />
                   <div className="absolute top-4 right-4">
                     <button 
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        try {
-                          const { data: userData } = await supabase.auth.getUser();
-                          if (!userData.user) {
-                            toast.error('Inicia sesión para guardar favoritos');
-                            return;
-                          }
-                          const { error } = await supabase.from('favorites').insert({
-                            user_id: userData.user.id,
-                            event_id: event.id
-                          });
-                          if (error) {
-                            if (error.code === '23505') {
-                              toast.info('Este evento ya está en tus favoritos');
-                            } else {
-                              throw error;
-                            }
-                          } else {
-                            toast.success('¡Añadido a favoritos!');
-                          }
-                        } catch(err) {
-                          toast.error('Error al guardar en favoritos');
-                        }
-                      }}
-                      className="p-2.5 rounded-xl bg-white/20 backdrop-blur-md border border-white/20 text-white hover:bg-white hover:text-red-500 transition-all"
+                      onClick={(e) => toggleFavorite(e, event.id)}
+                      className={`p-2.5 rounded-xl backdrop-blur-md border transition-all ${
+                        userFavorites.has(event.id)
+                          ? 'bg-red-500 border-red-500 text-white'
+                          : 'bg-white/20 border-white/20 text-white hover:bg-white hover:text-red-500'
+                      }`}
                     >
-                      <Heart className="w-4 h-4" />
+                      <Heart className={`w-4 h-4 ${userFavorites.has(event.id) ? 'fill-current' : ''}`} />
                     </button>
                   </div>
                   <div className="absolute bottom-4 left-4">

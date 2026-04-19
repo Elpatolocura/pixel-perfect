@@ -29,10 +29,14 @@ const EventDetailPage = () => {
   const [selectedAmenity, setSelectedAmenity] = useState<number | null>(null);
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteId, setFavoriteId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchEvent = async () => {
       try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
         const { data, error } = await supabase
           .from('events')
           .select('*')
@@ -41,6 +45,20 @@ const EventDetailPage = () => {
 
         if (error) throw error;
         setEvent(data);
+
+        if (user) {
+          const { data: favData } = await supabase
+            .from('favorites')
+            .select('id')
+            .eq('event_id', id)
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          if (favData) {
+            setIsFavorite(true);
+            setFavoriteId(favData.id);
+          }
+        }
       } catch (error) {
         console.error(error);
         toast.error('Evento no encontrado');
@@ -54,6 +72,45 @@ const EventDetailPage = () => {
       fetchEvent();
     }
   }, [id, navigate]);
+
+  const toggleFavorite = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Inicia sesión para guardar favoritos');
+        return;
+      }
+
+      if (isFavorite && favoriteId) {
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('id', favoriteId);
+        
+        if (error) throw error;
+        setIsFavorite(false);
+        setFavoriteId(null);
+        toast.success('Eliminado de favoritos');
+      } else {
+        const { data, error } = await supabase
+          .from('favorites')
+          .insert({
+            user_id: user.id,
+            event_id: id
+          })
+          .select()
+          .single();
+        
+        if (error) throw error;
+        setIsFavorite(true);
+        setFavoriteId(data.id);
+        toast.success('¡Añadido a favoritos!');
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al actualizar favoritos');
+    }
+  };
 
   const handleAmenityClick = (idx: number, info: string) => {
     setSelectedAmenity(idx);
@@ -102,8 +159,15 @@ const EventDetailPage = () => {
             <button className="p-3 rounded-2xl bg-white/20 backdrop-blur-md border border-white/20 text-white hover:bg-white/30 transition-all" onClick={() => toast.success('¡Enlace copiado!')}>
               <Share2 className="w-5 h-5" />
             </button>
-            <button className="p-3 rounded-2xl bg-white/20 backdrop-blur-md border border-white/20 text-white hover:bg-white/30 transition-all hover:text-red-500">
-              <Heart className="w-5 h-5" />
+            <button 
+              onClick={toggleFavorite}
+              className={`p-3 rounded-2xl backdrop-blur-md border transition-all ${
+                isFavorite 
+                  ? 'bg-red-500 border-red-500 text-white' 
+                  : 'bg-white/20 border-white/20 text-white hover:bg-white/30 hover:text-red-500'
+              }`}
+            >
+              <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
             </button>
           </div>
         </div>
