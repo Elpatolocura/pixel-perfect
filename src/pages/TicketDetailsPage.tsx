@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   ArrowLeft, Calendar, MapPin, Clock, Share2, 
@@ -18,7 +18,7 @@ const TicketDetailsPage = () => {
   const [ticketData, setTicketData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchTicketDetails = async () => {
       try {
         const { data, error } = await supabase

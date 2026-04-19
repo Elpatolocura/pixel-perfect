@@ -1,18 +1,51 @@
-import { useState } from 'react';
-import { mockEvents, categoryEmojis, allCategories } from '@/data/mockData';
+import { useState, useEffect } from 'react';
+import { Search, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import EventCard from '@/components/EventCard';
 import CategoryChip from '@/components/CategoryChip';
-import { Search } from 'lucide-react';
 
 const ExplorePage = () => {
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('todos');
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = mockEvents.filter((e) => {
-    const matchQuery = !query || e.title.toLowerCase().includes(query.toLowerCase()) || e.tags.some(t => t.includes(query.toLowerCase()));
-    const matchCategory = activeCategory === 'todos' || e.category === activeCategory;
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        setEvents(data || []);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEvents();
+  }, []);
+
+  const filtered = events.filter((e) => {
+    const matchQuery = !query || e.title.toLowerCase().includes(query.toLowerCase()) || (e.tags && e.tags.some((t: string) => t.toLowerCase().includes(query.toLowerCase())));
+    const matchCategory = activeCategory === 'todos' || e.category.toLowerCase() === activeCategory.toLowerCase();
     return matchQuery && matchCategory;
   });
+
+  const allCategories = ['Música', 'Arte', 'Gastronomía', 'Deportes', 'Tech', 'Cultura', 'Fiesta', 'Bienestar'];
+  const categoryEmojis: Record<string, string> = {
+    'Música': '🎵',
+    'Arte': '🎨',
+    'Gastronomía': '🍕',
+    'Deportes': '⚽',
+    'Tech': '💻',
+    'Cultura': '📚',
+    'Fiesta': '🎉',
+    'Bienestar': '🧘',
+  };
 
   return (
     <div className="pb-24 px-5 pt-safe">
@@ -44,7 +77,12 @@ const ExplorePage = () => {
       </div>
 
       <div className="space-y-4">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-24">
+            <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground text-sm font-medium">Cargando eventos...</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-4xl mb-3">🔍</p>
             <p className="text-muted-foreground text-sm">No se encontraron eventos</p>
