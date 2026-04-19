@@ -158,7 +158,7 @@ const HomePage = () => {
               >
                 <div className="relative h-48 overflow-hidden">
                   <img 
-                    src={event.image || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800'} 
+                    src={event.image_url || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800'} 
                     alt={event.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                   />
@@ -214,7 +214,7 @@ const HomePage = () => {
                   <div className="flex items-center gap-4 text-slate-400 text-xs font-bold">
                     <div className="flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5" />
-                      {event.date} • {event.time}
+                      {event.event_date} • {event.event_time}
                     </div>
                   </div>
 

@@ -19,7 +19,7 @@ const EventCard = ({ event, variant = 'large' }: EventCardProps) => {
         <div className="text-2xl mb-2">{event.emoji}</div>
         <p className="font-semibold text-foreground text-sm leading-tight">{event.title}</p>
         <p className="text-muted-foreground text-xs mt-1">
-          {new Date(event.date).toLocaleDateString('es', { weekday: 'short' })}, {event.time}
+          {new Date(event.event_date || event.date).toLocaleDateString('es', { weekday: 'short' })}, {event.event_time || event.time}
         </p>
       </button>
     );
@@ -43,7 +43,7 @@ const EventCard = ({ event, variant = 'large' }: EventCardProps) => {
           <div className="flex-1">
             <h3 className="font-semibold text-foreground text-base leading-tight">{event.title}</h3>
             <p className="text-muted-foreground text-sm mt-1">
-              {new Date(event.date).toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })} · {event.time}
+              {new Date(event.event_date || event.date).toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })} · {event.event_time || event.time}
             </p>
           </div>
           <div className="bg-accent/10 text-accent px-2.5 py-1 rounded-lg text-xs font-semibold">

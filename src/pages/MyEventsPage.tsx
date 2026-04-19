@@ -66,7 +66,7 @@ const MyEventsPage = () => {
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-1.5 text-muted-foreground">
                     <Calendar className="w-3.5 h-3.5" />
-                    <span className="text-[10px] font-medium">{new Date(event.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>
+                    <span className="text-[10px] font-medium">{new Date(event.event_date || event.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-muted-foreground">
                     <Users className="w-3.5 h-3.5" />

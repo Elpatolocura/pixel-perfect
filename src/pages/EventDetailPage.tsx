@@ -92,7 +92,7 @@ const EventDetailPage = () => {
     <div className="min-h-screen bg-white pb-24 animate-fade-in">
       {/* Hero Image Section */}
       <div className="relative h-[400px]">
-        <img src={event.image || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800'} alt={event.title} className="w-full h-full object-cover" />
+        <img src={event.image_url || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800'} alt={event.title} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
         <div className="absolute top-12 left-6 right-6 flex justify-between items-center">
           <button onClick={() => navigate(-1)} className="p-3 rounded-2xl bg-white/20 backdrop-blur-md border border-white/20 text-white hover:bg-white/30 transition-all">
@@ -124,7 +124,7 @@ const EventDetailPage = () => {
                 <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600"><Calendar className="w-4 h-4" /></div>
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Fecha</p>
               </div>
-              <p className="text-[13px] font-black text-slate-900 leading-tight">{event.date}</p>
+              <p className="text-[13px] font-black text-slate-900 leading-tight">{event.event_date}</p>
             </div>
             
             <div className="flex flex-col justify-center p-5 bg-white rounded-[28px] border border-slate-100 shadow-sm">
@@ -132,7 +132,7 @@ const EventDetailPage = () => {
                 <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-500"><Clock className="w-4 h-4" /></div>
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Horario</p>
               </div>
-              <p className="text-[13px] font-black text-slate-900 leading-tight">{event.time}</p>
+              <p className="text-[13px] font-black text-slate-900 leading-tight">{event.event_time}</p>
             </div>
           </div>
           

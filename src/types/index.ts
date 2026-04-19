@@ -7,10 +7,13 @@ export interface EventData {
   category: EventCategory;
   date: string;
   time: string;
+  event_date?: string;
+  event_time?: string;
   location: string;
   price: number;
   currency: string;
   image: string;
+  image_url?: string;
   emoji: string;
   organizer: {
     id: string;

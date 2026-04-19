@@ -95,7 +95,7 @@ const FavoritesPage = () => {
               >
                 <div className="flex h-32">
                   <div className="w-32 h-full shrink-0 relative">
-                    <img src={event.image || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800'} alt={event.title} className="w-full h-full object-cover" />
+                    <img src={event.image_url || event.image || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800'} alt={event.title} className="w-full h-full object-cover" />
                     <div className="absolute top-2 left-2">
                       <span className="px-2 py-1 rounded-md bg-white/90 backdrop-blur-sm text-[8px] font-black uppercase text-slate-900">{event.category}</span>
                     </div>
@@ -116,7 +116,7 @@ const FavoritesPage = () => {
                       <div className="mt-1.5 space-y-1">
                         <div className="flex items-center gap-1.5 text-slate-500 text-[10px] font-medium">
                           <Calendar className="w-3 h-3 text-primary shrink-0" />
-                          <span className="truncate">{event.date} • {event.time}</span>
+                          <span className="truncate">{(event.event_date || event.date)} • {(event.event_time || event.time)}</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-slate-500 text-[10px] font-medium">
                           <MapPin className="w-3 h-3 text-primary shrink-0" />
