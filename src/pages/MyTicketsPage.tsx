@@ -173,11 +173,39 @@ const MyTicketsPage = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="past" className="opacity-60 grayscale-[0.5]">
-            {/* Similar structure for past tickets */}
-            <div className="text-center py-20">
-              <p className="text-muted-foreground">No hay historial de tickets.</p>
-            </div>
+          <TabsContent value="past" className="mt-6">
+            {pastTickets.length > 0 ? (
+              <div className="space-y-4 opacity-70 grayscale-[0.3]">
+                {pastTickets.map(({ id, events, quantity, purchase_date }) => (
+                  <Card key={id} className="overflow-hidden border-none shadow-sm bg-slate-50/50">
+                    <CardContent className="p-0 flex h-32">
+                      <div className="w-24 bg-slate-200 flex flex-col items-center justify-center gap-2 relative">
+                        <span className="text-xl opacity-50">{events.emoji}</span>
+                        <div className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Expirado</div>
+                      </div>
+                      <div className="flex-1 p-4 flex flex-col justify-between">
+                        <div>
+                          <h3 className="font-bold text-sm text-slate-600 line-clamp-1">{events.title}</h3>
+                          <p className="text-[10px] text-slate-400">{new Date(events.event_date || events.date).toLocaleDateString()}</p>
+                        </div>
+                        <div className="text-[9px] text-slate-400 italic">ID: {id.slice(0,8)}</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-24 px-10 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="relative mb-6 opacity-40">
+                  <div className="absolute inset-0 bg-slate-200 rounded-[32px] blur-xl"></div>
+                  <div className="relative w-20 h-20 bg-slate-100 rounded-[32px] flex items-center justify-center grayscale">
+                    <Ticket className="w-10 h-10 text-slate-400" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-slate-400 tracking-tight">Sin historial</h3>
+                <p className="text-slate-400 text-sm mt-2 font-medium max-w-[200px]">Aquí aparecerán tus entradas de eventos finalizados.</p>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
