@@ -12,6 +12,7 @@ const BottomNav = () => {
     '/knowledge-base',
     '/checkout',
     '/auth',
+    '/welcome',
     '/onboarding',
     '/chat/',
     '/settings',

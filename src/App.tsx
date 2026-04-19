@@ -11,6 +11,7 @@ import ChatPage from "@/pages/ChatPage";
 import ProfilePage from "@/pages/ProfilePage";
 import CreateEventPage from "@/pages/CreateEventPage";
 import AuthPage from "@/pages/AuthPage";
+import WelcomePage from "./pages/WelcomePage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
@@ -56,6 +57,7 @@ const App = () => (
             <Route path="/terms" element={<LegalPage />} />
             <Route path="/create" element={<CreateEventPage />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/welcome" element={<WelcomePage />} />
             <Route path="/onboarding" element={<OnboardingPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />

@@ -43,6 +43,10 @@ const HomePage = () => {
           } else {
             setUserName('Usuario');
           }
+        } else {
+          // If no user is logged in, show welcome screen
+          navigate('/welcome');
+          return;
         }
 
         // Fetch events
