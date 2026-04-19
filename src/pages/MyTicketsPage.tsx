@@ -150,21 +150,24 @@ const MyTicketsPage = () => {
             ) : (
               <div className="flex flex-col items-center justify-center py-24 px-10 text-center animate-in fade-in zoom-in-95 duration-500">
                 <div className="relative mb-8">
-                  <div className="absolute inset-0 bg-gradient-to-tr from-cyan-400 via-blue-500 to-indigo-500 rounded-[32px] blur-2xl opacity-20 animate-pulse"></div>
-                  <div className="relative w-24 h-24 bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-500 rounded-[32px] shadow-2xl shadow-blue-500/40 flex items-center justify-center rotate-3 hover:rotate-0 transition-transform duration-500">
-                    <Ticket className="w-12 h-12 text-white animate-bounce" />
-                    <Sparkles className="absolute -top-2 -right-2 w-8 h-8 text-cyan-200 animate-pulse" />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-violet-400 via-fuchsia-500 to-rose-500 rounded-[32px] blur-2xl opacity-30 animate-pulse"></div>
+                  <div className="relative w-28 h-28 bg-gradient-to-br from-violet-500 via-fuchsia-600 to-rose-500 rounded-[35px] shadow-2xl shadow-fuchsia-500/40 flex items-center justify-center rotate-6 hover:rotate-0 transition-transform duration-700 group cursor-pointer">
+                    <Ticket className="w-14 h-14 text-white animate-bounce drop-shadow-lg" />
+                    <Sparkles className="absolute -top-3 -right-3 w-10 h-10 text-yellow-300 animate-spin-slow" />
+                    <div className="absolute -bottom-2 -left-2 w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30 rotate-12 group-hover:rotate-0 transition-transform">
+                      <QrCode className="w-6 h-6 text-white" />
+                    </div>
                   </div>
                 </div>
 
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-3">¿Aún sin planes?</h3>
-                <p className="text-slate-500 text-[15px] font-medium leading-relaxed max-w-[240px] mx-auto mb-10">
+                <h3 className="text-3xl font-black text-slate-900 tracking-tight mb-3">¿Aún sin planes?</h3>
+                <p className="text-slate-500 text-[16px] font-medium leading-relaxed max-w-[280px] mx-auto mb-10">
                   No tienes tickets activos por ahora. ¡Descubre los eventos más emocionantes y consigue los tuyos!
                 </p>
 
                 <Button
                   onClick={() => navigate('/')}
-                  className="w-full h-15 rounded-[22px] bg-gradient-to-r from-primary to-blue-600 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-primary/20 active:scale-95 transition-all hover:shadow-primary/40 group border-none"
+                  className="w-full max-w-xs h-16 rounded-[24px] bg-gradient-to-r from-violet-600 via-fuchsia-600 to-rose-500 text-white font-black text-sm uppercase tracking-widest shadow-2xl shadow-fuchsia-500/30 active:scale-95 transition-all hover:shadow-fuchsia-500/50 group border-none"
                 >
                   Explorar Eventos
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -195,15 +198,17 @@ const MyTicketsPage = () => {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-24 px-10 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
-                <div className="relative mb-6 opacity-40">
-                  <div className="absolute inset-0 bg-slate-200 rounded-[32px] blur-xl"></div>
-                  <div className="relative w-20 h-20 bg-slate-100 rounded-[32px] flex items-center justify-center grayscale">
-                    <Ticket className="w-10 h-10 text-slate-400" />
+              <div className="flex flex-col items-center justify-center py-24 px-10 text-center animate-in fade-in slide-in-from-bottom-8 duration-1000">
+                <div className="relative mb-8">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-amber-400 via-orange-500 to-red-500 rounded-[32px] blur-2xl opacity-20"></div>
+                  <div className="relative w-24 h-24 bg-gradient-to-br from-slate-100 to-slate-200 rounded-[32px] flex items-center justify-center shadow-inner overflow-hidden border border-slate-200">
+                    <Ticket className="w-10 h-10 text-slate-300 -rotate-12" />
+                    <div className="absolute inset-0 bg-gradient-to-tr from-amber-400/20 to-orange-500/20 mix-blend-overlay"></div>
+                    <Sparkles className="absolute top-2 right-2 w-6 h-6 text-amber-400/40" />
                   </div>
                 </div>
-                <h3 className="text-xl font-bold text-slate-400 tracking-tight">Sin historial</h3>
-                <p className="text-slate-400 text-sm mt-2 font-medium max-w-[200px]">Aquí aparecerán tus entradas de eventos finalizados.</p>
+                <h3 className="text-2xl font-black text-slate-800 tracking-tight">Sin historial</h3>
+                <p className="text-slate-500 text-[15px] mt-3 font-medium max-w-[220px] leading-relaxed">Aquí aparecerán tus entradas de eventos que ya han finalizado.</p>
               </div>
             )}
           </TabsContent>

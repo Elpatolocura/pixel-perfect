@@ -21,6 +21,7 @@ export interface EventData {
     avatar: string;
   };
   attendees: number;
+  attendees_count?: number;
   maxAttendees: number;
   isFavorite: boolean;
   tags: string[];

@@ -9,22 +9,82 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator 
 } from '@/components/ui/dropdown-menu';
-import { mockNotifications } from '@/data/mockData';
-import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
+import { Loader2 } from 'lucide-react';
 
 const NotificationsPage = () => {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = React.useState(mockNotifications);
+  const [notifications, setNotifications] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    toast.success('Todas las notificaciones marcadas como leídas');
+  const fetchNotifications = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setNotifications(data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching notifications", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const clearAll = () => {
-    setNotifications([]);
-    toast.success('Notificaciones eliminadas');
+  React.useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const markAllAsRead = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { error } = await supabase
+          .from('notifications')
+          .update({ read: true })
+          .eq('user_id', user.id);
+        
+        if (error) throw error;
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        toast.success('Todas las notificaciones marcadas como leídas');
+      }
+    } catch (error) {
+      toast.error('Error al actualizar notificaciones');
+    }
   };
+
+  const clearAll = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { error } = await supabase
+          .from('notifications')
+          .delete()
+          .eq('user_id', user.id);
+        
+        if (error) throw error;
+        setNotifications([]);
+        toast.success('Notificaciones eliminadas');
+      }
+    } catch (error) {
+      toast.error('Error al eliminar notificaciones');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center pb-24">
+        <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground font-medium text-sm">Cargando notificaciones...</p>
+      </div>
+    );
+  }
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -88,7 +148,7 @@ const NotificationsPage = () => {
                   <h3 className={`text-sm font-bold leading-tight ${!notif.read ? 'text-foreground' : 'text-foreground/80'}`}>
                     {notif.title}
                   </h3>
-                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">{notif.timestamp}</span>
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">{new Date(notif.created_at).toLocaleDateString()}</span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
                   {notif.message}

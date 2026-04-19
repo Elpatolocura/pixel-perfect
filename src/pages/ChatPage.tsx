@@ -1,12 +1,97 @@
-import { mockChatRooms, mockPersonalChats } from '@/data/mockData';
-import { MessageCircle, Users, User } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { Loader2, MessageCircle, Users, User } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const ChatPage = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('eventos');
+  const [eventRooms, setEventRooms] = useState<any[]>([]);
+  const [privateRooms, setPrivateRooms] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchChats = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          // Fetch rooms where user is member
+          const { data, error } = await supabase
+            .from('chat_room_members')
+            .select(`
+              room_id,
+              unread_count,
+              chat_rooms!inner (
+                *,
+                chat_room_members (user_id)
+              )
+            `)
+            .eq('user_id', user.id);
+
+          if (error) throw error;
+
+          // Collect all unique "other" user IDs for private chats
+          const otherUserIds = new Set<string>();
+          data?.forEach(m => {
+            if (m.chat_rooms.type === 'private') {
+              const other = m.chat_rooms.chat_room_members.find((rm: any) => rm.user_id !== user.id);
+              if (other) otherUserIds.add(other.user_id);
+            }
+          });
+
+          // Fetch profiles for those users
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url')
+            .in('id', Array.from(otherUserIds));
+
+          const profileMap = new Map(profiles?.map(p => [p.id, p]));
+
+          const rooms = data?.map(m => {
+            const room = m.chat_rooms;
+            let displayName = room.name || 'Chat';
+            let displayAvatar = null;
+
+            if (room.type === 'private') {
+              const otherMember = room.chat_room_members.find((rm: any) => rm.user_id !== user.id);
+              const profile = otherMember ? profileMap.get(otherMember.user_id) : null;
+              
+              if (profile) {
+                displayName = profile.full_name || 'Usuario';
+                displayAvatar = profile.avatar_url;
+              }
+            }
+
+            return {
+              ...room,
+              name: displayName,
+              avatar: displayAvatar,
+              unread: m.unread_count
+            };
+          }) || [];
+
+          setEventRooms(rooms.filter(r => r.type === 'event'));
+          setPrivateRooms(rooms.filter(r => r.type === 'private'));
+        }
+      } catch (error) {
+        console.error("Error fetching chats", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchChats();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center pb-24">
+        <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground font-medium text-sm">Cargando tus mensajes...</p>
+      </div>
+    );
+  }
   
   const ChatList = ({ rooms, type }: { rooms: any[], type: 'event' | 'person' }) => {
     if (rooms.length === 0) {
@@ -42,20 +127,39 @@ const ChatPage = () => {
             onClick={() => navigate(`/chat/${room.id}`)}
             className="w-full flex items-center gap-3.5 bg-card rounded-2xl p-4 border border-border text-left transition-all hover:shadow-lg active:scale-[0.98]"
           >
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border ${
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border overflow-hidden ${
               type === 'event' 
                 ? 'bg-primary/5 border-primary/10 text-primary' 
                 : 'bg-secondary border-border text-muted-foreground'
             }`}>
-              {type === 'event' ? <Users className="w-5 h-5" /> : <User className="w-5 h-5" />}
+              {room.avatar ? (
+                <img src={room.avatar} alt={room.name} className="w-full h-full object-cover" />
+              ) : (
+                type === 'event' ? <Users className="w-5 h-5" /> : <User className="w-5 h-5" />
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-center">
                 <p className="font-semibold text-foreground text-sm truncate">{room.name}</p>
-                <span className="text-[10px] text-muted-foreground ml-2 flex-shrink-0">{room.lastMessageTime}</span>
+                <span className="text-[10px] text-muted-foreground ml-2 flex-shrink-0">
+                  {room.last_message_at ? (() => {
+                    const date = new Date(room.last_message_at);
+                    const now = new Date();
+                    const diff = now.getTime() - date.getTime();
+                    const dayDiff = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    
+                    if (dayDiff === 0 && date.getDate() === now.getDate()) {
+                      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    } else if (dayDiff === 1 || (dayDiff === 0 && date.getDate() !== now.getDate())) {
+                      return 'Ayer';
+                    } else {
+                      return date.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+                    }
+                  })() : ''}
+                </span>
               </div>
               <div className="flex justify-between items-center mt-0.5">
-                <p className="text-xs text-muted-foreground truncate">{room.lastMessage}</p>
+                <p className="text-xs text-muted-foreground truncate">{room.last_message || 'No hay mensajes aún'}</p>
                 {room.unread > 0 && (
                   <span className="bg-primary text-primary-foreground text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center ml-2 flex-shrink-0">
                     {room.unread}
@@ -87,11 +191,11 @@ const ChatPage = () => {
         </TabsList>
 
         <TabsContent value="eventos">
-          <ChatList rooms={[]} type="event" />
+          <ChatList rooms={eventRooms} type="event" />
         </TabsContent>
         
         <TabsContent value="personas">
-          <ChatList rooms={[]} type="person" />
+          <ChatList rooms={privateRooms} type="person" />
         </TabsContent>
       </Tabs>
     </div>

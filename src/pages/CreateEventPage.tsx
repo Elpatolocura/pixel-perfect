@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Camera, Image as ImageIcon, Wifi, Car, Coffee, Music, Snowflake, Tv, Accessibility, Wine, Rocket, Lock } from 'lucide-react';
+import { ArrowLeft, Camera, Image as ImageIcon, Wifi, Car, Coffee, Music, Snowflake, Tv, Accessibility, Wine, Rocket, Lock, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { allCategories, categoryEmojis } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 const AVAILABLE_AMENITIES = [
   { id: 'wifi', label: 'WiFi', icon: Wifi },
@@ -32,11 +34,39 @@ const CreateEventPage = () => {
   });
 
   const [isBusiness, setIsBusiness] = useState<boolean | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
-    const membership = localStorage.getItem('user_membership');
-    setIsBusiness(membership === 'Business');
-  }, []);
+    const checkSubscription = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          navigate('/auth');
+          return;
+        }
+
+        // Fetch active subscription for the user
+        const { data: sub, error } = await supabase
+          .from('subscriptions')
+          .select('plan_id, status')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (error) throw error;
+
+        // Allow only Business plan
+        setIsBusiness(sub?.plan_id === 'Business');
+      } catch (error) {
+        console.error("Error checking subscription:", error);
+        setIsBusiness(false);
+      } finally {
+        setCheckingAuth(false);
+      }
+    };
+
+    checkSubscription();
+  }, [navigate]);
 
   const update = (key: string, value: any) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -76,12 +106,92 @@ const CreateEventPage = () => {
     });
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    // Basic validation
+    if (!form.title || !form.category || !form.date || !form.location) {
+      toast.error('Por favor completa los campos obligatorios (Título, Categoría, Fecha y Ubicación)');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
+
+      // Get profile for organizer details
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      // 1. Insert Event
+      const { data: event, error: eventError } = await supabase
+        .from('events')
+        .insert({
+          title: form.title,
+          description: form.description,
+          category: form.category,
+          location: form.location,
+          event_date: form.date,
+          event_time: form.time || '12:00:00',
+          price: parseFloat(form.price) || 0,
+          is_paid: parseFloat(form.price) > 0,
+          max_attendees: parseInt(form.maxAttendees) || 100,
+          image_url: form.image,
+          organizer_id: user.id,
+          organizer_name: profile?.full_name || 'Organizador',
+          organizer_avatar: profile?.avatar_url || 'https://i.pravatar.cc/150',
+          amenities: form.amenities,
+          emoji: categoryEmojis[form.category] || '🎫',
+          status: 'active'
+        })
+        .select()
+        .single();
+
+      if (eventError) throw eventError;
+
+      // 2. Insert Extra Images if any
+      if (form.extraImages.length > 0) {
+        const imageInserts = form.extraImages.map(url => ({
+          event_id: event.id,
+          image_url: url
+        }));
+
+        const { error: imagesError } = await supabase
+          .from('event_images')
+          .insert(imageInserts);
+
+        if (imagesError) console.error("Error inserting extra images:", imagesError);
+      }
+
+      toast.success('¡Evento creado con éxito!');
+      navigate('/');
+    } catch (error) {
+      console.error("Error creating event:", error);
+      toast.error('No se pudo crear el evento. Intenta de nuevo.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const removeExtraImage = (indexToRemove: number) => {
     setForm(prev => ({
       ...prev,
       extraImages: prev.extraImages.filter((_, index) => index !== indexToRemove)
     }));
   };
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+        <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mb-4" />
+        <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Verificando membresía...</p>
+      </div>
+    );
+  }
 
   if (isBusiness === false) {
     return (
@@ -315,8 +425,19 @@ const CreateEventPage = () => {
           </div>
         </div>
 
-        <button className="w-full bg-foreground text-primary-foreground py-4 rounded-2xl font-semibold text-base mt-4 shadow-lg shadow-foreground/10 active:scale-95 transition-all">
-          Crear evento
+        <button 
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className="w-full bg-foreground text-primary-foreground py-4 rounded-2xl font-semibold text-base mt-4 shadow-lg shadow-foreground/10 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span>Creando...</span>
+            </>
+          ) : (
+            'Crear evento'
+          )}
         </button>
       </div>
     </div>

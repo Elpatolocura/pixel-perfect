@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Crown, Rocket, Check, CreditCard, ShieldCheck, Lock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
+import { Loader2 } from 'lucide-react';
 
 const SubscriptionCheckoutPage = () => {
   const { planId } = useParams();
@@ -32,10 +34,50 @@ const SubscriptionCheckoutPage = () => {
   const price = billingCycle === 'monthly' ? plan.price : (plan.price * 10).toFixed(2);
   const Icon = plan.icon;
 
-  const handleSubscribe = () => {
-    localStorage.setItem('user_membership', plan.name);
-    toast.success(`¡Felicidades! Ahora eres miembro ${plan.name}.`);
-    setTimeout(() => navigate('/'), 2000);
+  const [isSubscribing, setIsSubscribing] = useState(false);
+
+  const handleSubscribe = async () => {
+    setIsSubscribing(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Debes iniciar sesión para suscribirte');
+        navigate('/auth');
+        return;
+      }
+
+      // Insert subscription into database
+      const { error } = await supabase
+        .from('subscriptions')
+        .upsert({
+          user_id: user.id,
+          plan_id: plan.name,
+          status: 'active',
+          price_paid: parseFloat(price as string),
+          billing_period: billingCycle,
+          started_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + (billingCycle === 'monthly' ? 30 : 365) * 24 * 60 * 60 * 1000).toISOString()
+        });
+
+      if (error) throw error;
+
+      localStorage.setItem('user_membership', plan.name);
+      toast.success(`¡Felicidades! Ahora eres miembro ${plan.name}.`);
+      
+      // Si el plan es Business, ir a crear evento, si no al inicio
+      setTimeout(() => {
+        if (plan.name === 'Business') {
+          navigate('/create-event');
+        } else {
+          navigate('/');
+        }
+      }, 2000);
+    } catch (error) {
+      console.error("Error subscribing:", error);
+      toast.error('Hubo un error al procesar tu suscripción');
+    } finally {
+      setIsSubscribing(false);
+    }
   };
 
   return (
@@ -142,10 +184,17 @@ const SubscriptionCheckoutPage = () => {
       <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/90 backdrop-blur-xl border-t border-slate-200 z-50 flex justify-center">
         <Button 
           onClick={handleSubscribe}
-          className={`w-full max-w-lg rounded-2xl h-14 font-black uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-2 text-white bg-gradient-to-r ${plan.gradient} hover:opacity-90`}
+          disabled={isSubscribing}
+          className={`w-full max-w-lg rounded-2xl h-14 font-black uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-2 text-white bg-gradient-to-r ${plan.gradient} hover:opacity-90 disabled:opacity-50`}
         >
-          <Sparkles className="w-5 h-5" />
-          Suscribirme por ${price}
+          {isSubscribing ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <>
+              <Sparkles className="w-5 h-5" />
+              Suscribirme por ${price}
+            </>
+          )}
         </Button>
       </div>
     </div>

@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Calendar, MapPin, Users, Share2, 
-  Heart, MessageSquare, Info, ShieldCheck, Star,
-  Clock, Ticket, Map as MapIcon, ChevronRight,
-  Wifi, Snowflake, Tv, Car, Coffee, Accessibility, 
+  Heart, MessageSquare, Info, Lock,
+  Clock, Map as MapIcon,
+  Wifi, Snowflake, Tv, Car, Accessibility, 
   GlassWater, Music, Sparkles, Utensils, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,12 +31,12 @@ const EventDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteId, setFavoriteId] = useState<string | null>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followers, setFollowers] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchEvent = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        
         const { data, error } = await supabase
           .from('events')
           .select('*')
@@ -46,21 +46,59 @@ const EventDetailPage = () => {
         if (error) throw error;
         setEvent(data);
 
-        if (user) {
-          const { data: favData } = await supabase
-            .from('favorites')
-            .select('id')
-            .eq('event_id', id)
-            .eq('user_id', user.id)
-            .maybeSingle();
-          
-          if (favData) {
-            setIsFavorite(true);
-            setFavoriteId(favData.id);
+        // Fetch secondary data without breaking the main flow
+        const fetchSecondaryData = async () => {
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              // Check favorites
+              const { data: favData } = await supabase
+                .from('favorites')
+                .select('id')
+                .eq('event_id', id)
+                .eq('user_id', user.id)
+                .maybeSingle();
+              
+              if (favData) {
+                setIsFavorite(true);
+                setFavoriteId(favData.id);
+              }
+
+              // Check following
+              const { data: followData } = await supabase
+                .from('event_followers')
+                .select('id')
+                .eq('event_id', id)
+                .eq('user_id', user.id)
+                .maybeSingle();
+              
+              setIsFollowing(!!followData);
+            }
+
+            // Fetch some follower avatars
+            const { data: followersData } = await supabase
+              .from('event_followers')
+              .select(`
+                user_id,
+                profiles (
+                  avatar_url
+                )
+              `)
+              .eq('event_id', id)
+              .limit(5);
+            
+            if (followersData) {
+              setFollowers(followersData.map(f => (f as any).profiles?.avatar_url).filter(Boolean));
+            }
+          } catch (e) {
+            console.error("Secondary data fetch failed:", e);
           }
-        }
+        };
+
+        fetchSecondaryData();
+
       } catch (error) {
-        console.error(error);
+        console.error("Main event fetch failed:", error);
         toast.error('Evento no encontrado');
         navigate('/');
       } finally {
@@ -112,6 +150,73 @@ const EventDetailPage = () => {
     }
   };
 
+  const toggleFollow = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Inicia sesión para seguir este evento');
+        return;
+      }
+
+      if (isFollowing) {
+        const { error } = await supabase
+          .from('event_followers')
+          .delete()
+          .eq('event_id', id)
+          .eq('user_id', user.id);
+        
+        if (error) throw error;
+        setIsFollowing(false);
+        toast.success('Ya no sigues este evento');
+      } else {
+        const { error } = await supabase
+          .from('event_followers')
+          .insert({
+            user_id: user.id,
+            event_id: id
+          });
+        
+        if (error) throw error;
+        setIsFollowing(true);
+        toast.success('¡Ahora sigues este evento!');
+        
+        // Also add to event chat room if exists
+        const { data: room } = await supabase
+          .from('chat_rooms')
+          .select('id')
+          .eq('event_id', id)
+          .eq('type', 'event')
+          .maybeSingle();
+        
+        if (room) {
+          await supabase.from('chat_room_members').upsert({
+            room_id: room.id,
+            user_id: user.id
+          }, { onConflict: 'room_id,user_id' });
+        }
+      }
+      
+      // Refresh avatars
+      const { data: followersData } = await supabase
+        .from('event_followers')
+        .select(`
+          user_id,
+          profiles (
+            avatar_url
+          )
+        `)
+        .eq('event_id', id)
+        .limit(5);
+      
+      if (followersData) {
+        setFollowers(followersData.map(f => (f as any).profiles?.avatar_url).filter(Boolean));
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al seguir el evento');
+    }
+  };
+
   const handleAmenityClick = (idx: number, info: string) => {
     setSelectedAmenity(idx);
     toast.info(info, {
@@ -145,6 +250,145 @@ const EventDetailPage = () => {
 
   const priceDisplay = event.price && event.price !== '0' && event.price !== 'Gratis' ? `$${event.price}` : 'Gratis';
 
+  const handleOrganizerChat = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Inicia sesión para chatear con el organizador');
+        return;
+      }
+
+      if (user.id === event.organizer_id) {
+        toast.error('No puedes chatear contigo mismo');
+        return;
+      }
+
+      setLoading(true);
+
+      // Step 1: Find all rooms where the current user is a member
+      const { data: myMemberships, error: membersError } = await supabase
+        .from('chat_room_members')
+        .select('room_id')
+        .eq('user_id', user.id);
+
+      if (membersError) throw membersError;
+
+      let targetRoomId = null;
+
+      if (myMemberships && myMemberships.length > 0) {
+        const roomIds = myMemberships.map(m => m.room_id);
+        
+        // Step 2: Find which of those rooms are 'private' AND have the organizer as a member
+        const { data: existingRoom, error: lookupError } = await supabase
+          .from('chat_room_members')
+          .select(`
+            room_id,
+            chat_rooms!inner (
+              type
+            )
+          `)
+          .in('room_id', roomIds)
+          .eq('user_id', event.organizer_id)
+          .eq('chat_rooms.type', 'private')
+          .maybeSingle();
+
+        if (lookupError) throw lookupError;
+        
+        if (existingRoom) {
+          targetRoomId = existingRoom.room_id;
+        }
+      }
+
+      if (!targetRoomId) {
+        // Step 3: Create a new private room
+        const { data: newRoom, error: roomError } = await supabase
+          .from('chat_rooms')
+          .insert({
+            type: 'private',
+            name: `Chat Privado`,
+            participants_count: 2
+          })
+          .select()
+          .single();
+
+        if (roomError) throw roomError;
+        targetRoomId = newRoom.id;
+
+        // Step 4: Add both members
+        const { error: joinError } = await supabase
+          .from('chat_room_members')
+          .insert([
+            { room_id: targetRoomId, user_id: user.id },
+            { room_id: targetRoomId, user_id: event.organizer_id }
+          ]);
+
+        if (joinError) {
+          // Cleanup the room if we couldn't add members
+          await supabase.from('chat_rooms').delete().eq('id', targetRoomId);
+          throw joinError;
+        }
+      }
+
+      navigate(`/chat/${targetRoomId}`);
+    } catch (error: any) {
+      console.error("Chat error:", error);
+      toast.error(`Error: ${error.message || 'No se pudo iniciar el chat'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isFree = !event.price || event.price === 0 || event.price === '0' || event.price === 'Gratis';
+
+  const handleFreeTicket = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Inicia sesión para obtener tu entrada');
+        navigate('/auth');
+        return;
+      }
+
+      setLoading(true);
+
+      // Check if user already has a ticket
+      const { data: existing } = await supabase
+        .from('tickets')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('event_id', id)
+        .maybeSingle();
+
+      if (existing) {
+        toast.info('Ya tienes una entrada para este evento');
+        navigate('/tickets');
+        return;
+      }
+
+      // Create ticket with correct column names
+      const { error } = await supabase
+        .from('tickets')
+        .insert({
+          user_id: user.id,
+          event_id: id,
+          status: 'active',
+          quantity: 1,
+          unit_price: 0,
+          total_price: 0
+        });
+
+      if (error) throw error;
+
+      toast.success('¡Entrada obtenida con éxito! 🎉');
+      navigate('/tickets');
+    } catch (error: any) {
+      console.error("Error getting free ticket:", error);
+      toast.error(`Error: ${error.message || 'No se pudo obtener la entrada'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white pb-24 animate-fade-in">
       {/* Hero Image Section */}
@@ -160,6 +404,17 @@ const EventDetailPage = () => {
               <Share2 className="w-5 h-5" />
             </button>
             <button 
+              onClick={toggleFollow}
+              className={`flex items-center gap-2 px-4 py-3 rounded-2xl backdrop-blur-md border transition-all active:scale-95 ${
+                isFollowing 
+                  ? 'bg-emerald-500 border-emerald-500 text-white' 
+                  : 'bg-white/20 border-white/20 text-white hover:bg-white/30'
+              }`}
+            >
+              <Users className="w-5 h-5" />
+              <span className="text-xs font-black uppercase tracking-widest">{isFollowing ? 'Siguiendo' : 'Seguir'}</span>
+            </button>
+            <button 
               onClick={toggleFavorite}
               className={`p-3 rounded-2xl backdrop-blur-md border transition-all ${
                 isFavorite 
@@ -172,7 +427,14 @@ const EventDetailPage = () => {
           </div>
         </div>
         <div className="absolute bottom-8 left-6 right-6">
-          <Badge className="bg-primary text-white border-none px-4 py-1.5 mb-4 font-black text-[10px] uppercase tracking-widest">{event.category}</Badge>
+          <div className="flex gap-2 items-center mb-4">
+            <Badge className="bg-primary text-white border-none px-4 py-1.5 font-black text-[10px] uppercase tracking-widest">{event.category}</Badge>
+            {isFree && (
+              <Badge className="bg-emerald-500 text-white border-none px-4 py-1.5 font-black text-[10px] uppercase tracking-widest flex items-center gap-1">
+                <Sparkles className="w-3 h-3" /> Gratis
+              </Badge>
+            )}
+          </div>
           <h1 className="text-3xl font-black text-white tracking-tight leading-tight">{event.title}</h1>
         </div>
       </div>
@@ -211,6 +473,31 @@ const EventDetailPage = () => {
             </div>
             <button className="w-12 h-12 shrink-0 rounded-2xl bg-white/10 border border-white/10 hover:bg-white/20 transition-all flex items-center justify-center"><MapIcon className="w-5 h-5" /></button>
           </div>
+
+          {/* Attendees circles */}
+          <div className="flex items-center justify-between px-2 pt-2">
+            <div className="flex items-center gap-3">
+              <div className="flex -space-x-3">
+                {followers.length > 0 ? (
+                  followers.map((avatar, i) => (
+                    <div key={i} className="w-10 h-10 rounded-full border-4 border-white overflow-hidden bg-slate-100 shadow-sm">
+                      <img src={avatar} alt="Follower" className="w-full h-full object-cover" />
+                    </div>
+                  ))
+                ) : (
+                  [1, 2, 3].map(i => (
+                    <div key={i} className="w-10 h-10 rounded-full border-4 border-white bg-slate-100 flex items-center justify-center">
+                      <Users className="w-4 h-4 text-slate-300" />
+                    </div>
+                  ))
+                )}
+              </div>
+              <div>
+                <p className="text-[13px] font-black text-slate-900">+{event.attendees_count || 0} asistirán</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gente que conoces</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Description */}
@@ -223,15 +510,23 @@ const EventDetailPage = () => {
         <div className="flex items-center justify-between p-2 pl-4 pr-2 bg-slate-50 rounded-full border border-slate-100">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full overflow-hidden shadow-sm border-2 border-white">
-               <img src={`https://i.pravatar.cc/150?u=${event.organizer_id}`} alt={event.organizer_name || 'Organizador'} className="w-full h-full object-cover" />
+               <img src={event.organizer_avatar || `https://i.pravatar.cc/150?u=${event.organizer_id}`} alt={event.organizer_name || 'Organizador'} className="w-full h-full object-cover" />
             </div>
             <div>
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Organizador</p>
               <h4 className="text-sm font-black text-slate-900">{event.organizer_name || 'Organizador Anónimo'}</h4>
             </div>
           </div>
-          <button onClick={() => navigate(`/chat/${event.id}`)} className="h-12 px-5 rounded-full bg-primary text-white font-black text-[11px] uppercase tracking-widest flex items-center gap-2 hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
-            <MessageSquare className="w-4 h-4" /> Chat
+          <button 
+            onClick={() => isFollowing ? handleOrganizerChat() : toast.error('Sigue el evento para habilitar el chat')} 
+            className={`h-12 px-5 rounded-full font-black text-[11px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg ${
+              isFollowing 
+                ? 'bg-primary text-white shadow-primary/20 hover:bg-primary/90' 
+                : 'bg-slate-200 text-slate-400 shadow-none cursor-not-allowed grayscale'
+            }`}
+          >
+            {isFollowing ? <MessageSquare className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+            Chat
           </button>
         </div>
 
@@ -254,7 +549,7 @@ const EventDetailPage = () => {
                     }`}
                   >
                     <div className={`flex items-center justify-center ${selectedAmenity === idx ? 'text-white' : textColorClass}`}>
-                      {React.cloneElement(item.icon, { className: 'w-4 h-4' })}
+                       {React.cloneElement(item.icon, { className: 'w-4 h-4' })}
                     </div>
                     <span className={`text-[11px] font-black uppercase tracking-wider ${selectedAmenity === idx ? 'text-white' : 'text-slate-700'}`}>{item.label}</span>
                   </button>
@@ -269,8 +564,24 @@ const EventDetailPage = () => {
 
         {/* Floating Bottom Bar */}
         <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-xl border-t border-slate-100 flex items-center justify-between z-50">
-          <div className="flex flex-col"><span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">Precio Final</span><span className="text-2xl font-black text-slate-900">{event.price}</span></div>
-          <Button onClick={() => navigate(`/checkout/${id}`)} className="rounded-[24px] bg-slate-900 text-white px-10 h-14 font-black uppercase tracking-[0.15em] shadow-2xl shadow-slate-900/20 hover:bg-slate-800 transition-all">Comprar Entrada</Button>
+          <div className="flex flex-col">
+            <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">
+              {isFree ? 'Acceso' : 'Precio Final'}
+            </span>
+            <span className="text-2xl font-black text-slate-900">
+              {isFree ? 'Gratis' : `$${event.price}`}
+            </span>
+          </div>
+          <Button 
+            onClick={() => isFree ? handleFreeTicket() : navigate(`/checkout/${id}`)} 
+            className={`rounded-[24px] px-10 h-14 font-black uppercase tracking-[0.15em] shadow-2xl transition-all ${
+              isFree 
+                ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20 text-white' 
+                : 'bg-slate-900 hover:bg-slate-800 shadow-slate-900/20 text-white'
+            }`}
+          >
+            {isFree ? 'Obtener Entrada' : 'Comprar Entrada'}
+          </Button>
         </div>
       </div>
     </div>

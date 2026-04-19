@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { supabase } from '@/lib/supabase';
+import { Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -97,71 +99,78 @@ const MessageBubble = ({
                 e.stopPropagation();
                 onScrollToMessage(msg.replyTo.id);
               }}
-              className={`p-2.5 m-2 mb-0 rounded-xl text-xs border-l-[3px] overflow-hidden flex flex-col min-w-0 cursor-pointer hover:opacity-80 transition-opacity ${msg.isMe ? 'bg-slate-800/50 border-slate-400' : 'bg-slate-50 border-primary'}`}
+              className={`p-2.5 m-2 mb-0 rounded-xl text-[11px] border-l-[3px] overflow-hidden flex flex-col min-w-0 cursor-pointer hover:opacity-80 transition-opacity ${
+                msg.isMe 
+                  ? 'bg-white/10 border-white/30 text-white/90' 
+                  : 'bg-slate-50 border-primary/40 text-slate-600'
+              }`}
             >
-              <span className={`font-bold mb-0.5 truncate ${msg.isMe ? 'text-slate-300' : 'text-primary'}`}>
-                {msg.replyTo.user || (msg.replyTo.isMe ? 'Tú' : 'Usuario')}
-              </span>
-              <span className={`truncate opacity-80 ${msg.isMe ? 'text-slate-400' : 'text-slate-500'}`}>
+              <div className="flex items-center gap-1.5 mb-1">
+                <div className={`w-1 h-1 rounded-full ${msg.isMe ? 'bg-white/50' : 'bg-primary'}`}></div>
+                <span className={`font-black uppercase tracking-widest text-[9px] ${msg.isMe ? 'text-white/60' : 'text-primary'}`}>
+                  {msg.replyTo.user || (msg.replyTo.isMe ? 'Tú' : 'Usuario')}
+                </span>
+              </div>
+              <span className="truncate italic opacity-80 leading-snug">
                 {msg.replyTo.text || 'Archivo multimedia'}
               </span>
             </div>
           )}
           
           {(images.length > 0 || msg.video) && (
-            <div className="p-1.5 sm:p-2 pb-0 flex flex-col gap-1.5 relative">
+            <div className="p-1.5 flex flex-col gap-1.5 relative group/media">
               {images.length > 0 && (
-                <div className={`overflow-hidden rounded-xl ${images.length > 1 ? 'grid grid-cols-2 gap-1 w-[220px] sm:w-[240px]' : ''}`}>
+                <div className={`overflow-hidden rounded-2xl ${images.length > 1 ? 'grid grid-cols-2 gap-1.5 w-[240px] sm:w-[260px]' : ''}`}>
                   {images.map((img: string, idx: number) => (
                     <button 
                       key={idx}
                       onClick={() => openImageViewer(images, idx)}
-                      className="w-full block"
+                      className="w-full block transition-transform hover:scale-[1.02] active:scale-95"
                     >
-                      <img src={img} alt="Attachment" className={`${images.length > 1 ? 'aspect-square object-cover w-full' : 'w-[220px] sm:w-[240px] max-w-full h-auto object-cover rounded-xl'}`} />
+                      <img src={img} alt="Attachment" className={`${images.length > 1 ? 'aspect-square object-cover w-full' : 'w-[240px] sm:w-[260px] max-w-full h-auto object-cover rounded-2xl'}`} />
                     </button>
                   ))}
                 </div>
               )}
 
               {msg.video && (
-                <div className="overflow-hidden rounded-xl bg-black">
-                  <video src={msg.video} controls className="w-[220px] sm:w-[240px] max-w-full max-h-[250px] object-contain" />
+                <div className="overflow-hidden rounded-2xl bg-black shadow-inner">
+                  <video src={msg.video} controls className="w-[240px] sm:w-[260px] max-w-full max-h-[300px] object-contain" />
                 </div>
               )}
               
               {!msg.text && (
-                <div className="absolute bottom-1.5 right-3 flex items-center gap-1 bg-black/40 backdrop-blur-md px-2 py-0.5 rounded-full z-20">
-                  <span className="text-[9px] font-bold text-white/90 uppercase tracking-widest">{msg.time}</span>
-                  {msg.isMe && <span className="text-primary text-[10px]">✓✓</span>}
+                <div className="absolute bottom-3 right-4 flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 opacity-0 group-hover/media:opacity-100 transition-opacity">
+                  <span className="text-[10px] font-black text-white/90 uppercase tracking-widest">{msg.time}</span>
+                  {msg.isMe && <span className="text-primary text-[10px] font-black">✓✓</span>}
                 </div>
               )}
             </div>
           )}
 
           {msg.text && (
-            <div className={`px-4 py-3 sm:px-5 sm:py-4 ${(images.length > 0 || msg.video) ? 'pt-2 sm:pt-3' : ''} relative`}>
-              <div className="whitespace-pre-wrap break-words inline">
+            <div className={`px-4 py-3 sm:px-5 sm:py-3.5 ${(images.length > 0 || msg.video) ? 'pt-1 sm:pt-1.5' : ''} flex flex-col`}>
+              <div className="whitespace-pre-wrap break-words leading-relaxed">
                 {displayText}
-                <span className="inline-block w-14 h-4"></span>
               </div>
+              
+              <div className="flex items-center justify-end gap-1.5 mt-1 -mr-1">
+                <span className={`text-[9px] font-black uppercase tracking-widest ${msg.isMe ? 'text-white/40' : 'text-slate-300'}`}>
+                  {msg.time}
+                </span>
+                {msg.isMe && <span className="text-primary text-[10px] font-black">✓✓</span>}
+              </div>
+
               {isLongMessage && (
                 <button 
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className={`mt-2 block text-[10px] font-black uppercase tracking-widest transition-colors ${
+                  className={`mt-2 block text-[10px] font-black uppercase tracking-widest transition-colors text-left ${
                     msg.isMe ? 'text-white/50 hover:text-white' : 'text-primary hover:text-primary/80'
                   }`}
                 >
                   {isExpanded ? 'Ver menos' : 'Ver más'}
                 </button>
               )}
-              
-              <div className="absolute bottom-2 right-4 flex items-center gap-1">
-                <span className={`text-[9px] font-bold uppercase tracking-widest ${msg.isMe ? 'text-white/50' : 'text-slate-400'}`}>
-                  {msg.time}
-                </span>
-                {msg.isMe && <span className="text-primary text-[10px]">✓✓</span>}
-              </div>
             </div>
           )}
         </div>
@@ -274,49 +283,139 @@ const ChatRoomPage = () => {
 
   const EMOJIS = ["😀","😂","🥰","😎","🤔","🙌","👍","🔥","🎉","✨","❤️","🚀","💡","🎵","📸","🎫","🍷","🎸","🎨","🎭"];
 
-  const [chatMessages, setChatMessages] = useState<any[]>([
-    { 
-      id: 1, 
-      user: "Ana", 
-      role: "Asistente",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150", 
-      text: "¡Hola a todos! ¿A qué hora nos vemos?", 
-      time: "14:00", 
-      isMe: false,
-      bio: "Amante de la música en vivo y fotógrafa aficionada. ¡Nos vemos en el próximo evento!",
-      stats: { events: 12, followers: 245 },
-      tags: ["Jazz Lover", "Photography", "Travel"]
-    },
-    { 
-      id: 2, 
-      user: "Tú", 
-      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150", 
-      text: "Estaré ahí a las 20:00 puntual.", 
-      time: "14:05", 
-      isMe: true 
-    },
-    { 
-      id: 3, 
-      user: "Carlos", 
-      role: "Organizador",
-      avatar: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=150", 
-      text: "Yo también, acabo de comprar mi ticket. ¡Nos vemos! 🚀", 
-      time: "14:10", 
-      isMe: false,
-      bio: "Organizador de eventos culturales con más de 5 años de experiencia. Mi pasión es conectar personas.",
-      stats: { events: 54, followers: "1.2k" },
-      tags: ["Events", "Networking", "Culture"]
-    },
-    {
-      id: 4,
-      user: "Tú",
-      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
-      text: "¡Excelente! Yo también voy.",
-      time: "14:15",
-      isMe: true,
-      replyTo: { id: 1, user: "Ana", text: "¡Hola a todos! ¿A qué hora nos vemos?" }
-    }
-  ]);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [roomInfo, setRoomInfo] = useState<any>(null);
+
+  useEffect(() => {
+    if (!id) return;
+
+    let currentUser: any = null;
+
+    const fetchInitialData = async () => {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (!authUser) return;
+        currentUser = authUser;
+
+        // Fetch room info with members
+        const { data: room, error: roomError } = await supabase
+          .from('chat_rooms')
+          .select(`
+            *,
+            chat_room_members (user_id)
+          `)
+          .eq('id', id)
+          .single();
+
+        if (roomError) throw roomError;
+
+        // If it's a private chat, get the other user's profile
+        if (room.type === 'private') {
+          const otherMember = room.chat_room_members.find((m: any) => m.user_id !== authUser.id);
+          
+          if (otherMember) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('full_name, avatar_url')
+              .eq('id', otherMember.user_id)
+              .single();
+            
+            if (profile) {
+              room.name = profile.full_name || 'Usuario';
+              room.avatar = profile.avatar_url;
+            }
+          }
+        }
+        
+        setRoomInfo(room);
+
+        // Fetch initial messages
+        const { data: messages, error } = await supabase
+          .from('chat_messages')
+          .select(`
+            *,
+            profiles:sender_id (full_name, avatar_url, role)
+          `)
+          .eq('room_id', id)
+          .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        const formattedMessages = messages?.map(m => ({
+          id: m.id,
+          user: m.profiles?.full_name || 'Usuario',
+          avatar: m.profiles?.avatar_url || 'https://i.pravatar.cc/150',
+          role: m.profiles?.role || 'Asistente',
+          text: m.text,
+          images: m.images || [],
+          video: m.video_url,
+          time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isMe: m.sender_id === authUser.id,
+          sender_id: m.sender_id,
+          replyTo: m.reply_to_id ? messages.find(prev => prev.id === m.reply_to_id) : null
+        })) || [];
+
+        setChatMessages(formattedMessages);
+      } catch (error) {
+        console.error("Error fetching chat data", error);
+        toast.error('Error al cargar el chat');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInitialData();
+
+    // Subscribe to new messages
+    const channel = supabase
+      .channel(`room-${id}`)
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'chat_messages',
+        filter: `room_id=eq.${id}`
+      }, async (payload) => {
+        // Prevent duplicate messages in UI
+        setChatMessages(prev => {
+          if (prev.some(m => m.id === payload.new.id)) return prev;
+          
+          // If message is not in list, fetch profile and add it
+          (async () => {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('full_name, avatar_url, role')
+              .eq('id', payload.new.sender_id)
+              .single();
+
+            const newMessage = {
+              id: payload.new.id,
+              user: profile?.full_name || 'Usuario',
+              avatar: profile?.avatar_url || 'https://i.pravatar.cc/150',
+              role: profile?.role || 'Asistente',
+              text: payload.new.text,
+              images: payload.new.images || [],
+              video_url: payload.new.video_url,
+              time: new Date(payload.new.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              isMe: payload.new.sender_id === currentUser?.id,
+              sender_id: payload.new.sender_id,
+              reply_to_id: payload.new.reply_to_id,
+              // Link the replyTo object from the current list
+              replyTo: payload.new.reply_to_id ? prev.find(m => m.id === payload.new.reply_to_id) : null
+            };
+
+            setChatMessages(current => [...current, newMessage]);
+          })();
+          
+          return prev;
+        });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id]);
 
   // Scroll to bottom whenever messages update
   useEffect(() => {
@@ -325,27 +424,37 @@ const ChatRoomPage = () => {
     }
   }, [chatMessages]);
 
-  const handleSendMessage = (e?: React.FormEvent) => {
+  const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!message.trim() && attachments.length === 0) return;
 
-    const newMessage = {
-      id: Date.now(),
-      text: message.trim(),
-      images: attachments.filter(a => a.type.startsWith('image/')).map(a => a.url),
-      video: attachments.find(a => a.type.startsWith('video/'))?.url,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isMe: true,
-      user: 'J',
-      replyTo: replyingTo
-    };
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Inicia sesión para enviar mensajes');
+        return;
+      }
 
-    setChatMessages(prev => [...prev, newMessage]);
-    setMessage('');
-    setAttachments([]);
-    setReplyingTo(null);
-    if (textareaRef.current) {
-      textareaRef.current.style.height = '56px';
+      const { error } = await supabase.from('chat_messages').insert({
+        room_id: id,
+        sender_id: user.id,
+        text: message.trim(),
+        images: attachments.filter(a => a.type.startsWith('image/')).map(a => a.url),
+        video_url: attachments.find(a => a.type.startsWith('video/'))?.url,
+        reply_to_id: replyingTo?.id
+      });
+
+      if (error) throw error;
+
+      setMessage('');
+      setAttachments([]);
+      setReplyingTo(null);
+      if (textareaRef.current) {
+        textareaRef.current.style.height = '56px';
+      }
+    } catch (error) {
+      console.error("Error sending message", error);
+      toast.error('No se pudo enviar el mensaje');
     }
   };
 
@@ -413,6 +522,15 @@ const ChatRoomPage = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="h-screen bg-slate-50 flex flex-col items-center justify-center">
+        <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+        <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Cargando chat...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-[#F8FAFC] overflow-hidden animate-fade-in">
       {/* Chat Header */}
@@ -423,13 +541,17 @@ const ChatRoomPage = () => {
           </button>
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-11 h-11 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-black shadow-lg shadow-slate-900/10">
-                J
+              <div className="w-11 h-11 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-black shadow-lg shadow-slate-900/10 overflow-hidden">
+                {roomInfo?.avatar ? (
+                  <img src={roomInfo.avatar} alt={roomInfo.name} className="w-full h-full object-cover" />
+                ) : (
+                  (roomInfo?.name || 'C').charAt(0).toUpperCase()
+                )}
               </div>
               <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></div>
             </div>
             <div>
-              <h1 className="text-[15px] font-black text-slate-900 leading-none mb-1">Festival de Jazz</h1>
+              <h1 className="text-[15px] font-black text-slate-900 leading-none mb-1">{roomInfo?.name || 'Chat'}</h1>
               <div className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
                 <p className="text-[10px] text-green-600 font-bold uppercase tracking-widest">En línea</p>
