@@ -42,19 +42,40 @@ const OnboardingPage = () => {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (user) {
-      // Intentamos guardar los datos en la tabla profiles
-      const { error } = await supabase.from('profiles').upsert({
+      // Preparamos los datos del perfil de forma completa
+      const profileData = {
         id: user.id,
-        role: 'user',
         preferences: selectedCategories,
         preferred_entry_type: entryType,
-      });
+        updated_at: new Date().toISOString(),
+      };
 
-      if (error) {
-        console.error('Error saving profile:', error);
-        toast.error('Error: Asegúrate de haber creado las tablas en Supabase con el SQL Editor.');
-      } else {
-        toast.success('¡Perfil completado!');
+      try {
+        // USAMOS UPSERT: Crea si no existe, actualiza si existe
+        // onConflict: 'id' asegura que sepa qué fila comparar
+        const { error } = await supabase
+          .from('profiles')
+          .upsert(profileData, { onConflict: 'id' });
+
+        if (error) {
+          console.error('Error saving profile:', error);
+          
+          // Si el error es por columnas faltantes, avisamos al usuario pero permitimos continuar
+          // para no arruinar la experiencia de navegación
+          if (error.code === '42703') {
+            toast.error('Configuración de base de datos incompleta. Contacta a soporte.');
+          } else {
+            toast.error('No pudimos guardar tus preferencias, pero puedes continuar.');
+          }
+          
+          // Navegamos de todos modos para que el usuario pueda usar la app
+          setTimeout(() => navigate('/'), 1500);
+        } else {
+          toast.success('¡Perfil completado con éxito!');
+          navigate('/');
+        }
+      } catch (err) {
+        console.error('Unexpected error:', err);
         navigate('/');
       }
     }

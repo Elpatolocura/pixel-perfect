@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Ticket, Calendar, MapPin, QrCode, MoreVertical, Trash2, Sparkles, Loader2 } from 'lucide-react';
 import { mockTickets, mockEvents } from '@/data/mockData';
@@ -13,11 +13,12 @@ import {
   DropdownMenuSeparator 
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 
 const MyTicketsPage = () => {
   const navigate = useNavigate();
-  const [tickets, setTickets] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
   const activeTickets = tickets
     .filter(t => t.status === 'active')

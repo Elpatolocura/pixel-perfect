@@ -46,8 +46,24 @@ const AuthPage = () => {
         toast.error(error.message);
       }
     } else {
-      toast.success('¡Bienvenido de nuevo!');
-      navigate('/profile');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('preferences')
+          .eq('id', user.id)
+          .single();
+
+        if (!profile?.preferences || profile.preferences.length === 0) {
+          toast.info('Completa tu perfil para continuar');
+          navigate('/onboarding');
+        } else {
+          toast.success('¡Bienvenido de nuevo!');
+          navigate('/');
+        }
+      } else {
+        navigate('/');
+      }
     }
     setLoading(false);
   };
@@ -74,11 +90,11 @@ const AuthPage = () => {
       const { error: profileError } = await supabase.from('profiles').upsert({
         id: data.user.id,
         full_name: fullName,
-      });
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' });
 
       if (profileError) {
-        console.error('Error creando perfil:', profileError);
-        // No bloqueamos el flujo, pero avisamos
+        console.error('Error creando perfil inicial:', profileError);
       }
       
       toast.success('¡Cuenta creada! Personalicemos tu perfil.');
