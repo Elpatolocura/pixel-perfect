@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Ticket, Calendar, MapPin, QrCode, MoreVertical, Trash2, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Ticket, Calendar, MapPin, QrCode, MoreVertical, Trash2, Sparkles, Loader2 } from 'lucide-react';
 import { mockTickets, mockEvents } from '@/data/mockData';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -164,9 +164,10 @@ const MyTicketsPage = () => {
 
                 <Button
                   onClick={() => navigate('/explore')}
-                  className="w-full h-14 rounded-2xl bg-slate-900 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-slate-900/20 active:scale-95 transition-all hover:bg-blue-600 hover:shadow-blue-500/30 border-none"
+                  className="w-full h-15 rounded-[22px] bg-gradient-to-r from-primary to-blue-600 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-primary/20 active:scale-95 transition-all hover:shadow-primary/40 group border-none"
                 >
                   Explorar Eventos
+                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </div>
             )}
