@@ -163,7 +163,7 @@ const MyTicketsPage = () => {
                 </p>
 
                 <Button
-                  onClick={() => navigate('/explore')}
+                  onClick={() => navigate('/')}
                   className="w-full h-15 rounded-[22px] bg-gradient-to-r from-primary to-blue-600 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-primary/20 active:scale-95 transition-all hover:shadow-primary/40 group border-none"
                 >
                   Explorar Eventos
