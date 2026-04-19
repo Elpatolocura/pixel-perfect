@@ -170,6 +170,12 @@ export const mockChatRooms: ChatRoom[] = [
   { id: 'c3', name: 'Cata de Vinos', eventId: 'e8', lastMessage: 'Recuerden llegar puntuales', lastMessageTime: 'Ayer', unread: 1, participants: 18 },
 ];
 
+export const mockPersonalChats: ChatRoom[] = [
+  { id: 'p1', name: 'Ranceth Aaaa', lastMessage: '¿Vamos al festival?', lastMessageTime: '10:00', unread: 1, participants: 2 },
+  { id: 'p2', name: 'Ana Martínez', lastMessage: 'Acabo de comprar mi ticket', lastMessageTime: '11:45', unread: 0, participants: 2 },
+  { id: 'p3', name: 'Carlos Ruíz', lastMessage: 'Te veo en la entrada', lastMessageTime: 'Ayer', unread: 0, participants: 2 },
+];
+
 export const mockNotifications: Notification[] = [
   { id: 'n1', title: 'Nuevo evento cerca', message: 'Noche de Salsa está a solo 2km de ti', type: 'event', read: false, timestamp: 'Hace 5 min' },
   { id: 'n2', title: 'Ticket confirmado', message: 'Tu ticket para Festival de Jazz está listo', type: 'ticket', read: false, timestamp: 'Hace 1 hora' },
