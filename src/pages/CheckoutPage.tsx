@@ -15,6 +15,31 @@ const CheckoutPage = () => {
   const navigate = useNavigate();
   const [ticketCount, setTicketCount] = useState(1);
   const [selectedZone, setSelectedZone] = useState('General');
+  const [event, setEvent] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    const fetchEvent = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+        setEvent(data);
+      } catch (error) {
+        console.error(error);
+        toast.error('Evento no encontrado');
+        navigate('/');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) fetchEvent();
+  }, [id, navigate]);
 
   const zones = [
     { name: 'General', price: 15 },
@@ -54,6 +79,16 @@ const CheckoutPage = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!event) return null;
+
   return (
     <div className="min-h-screen bg-[#FDFDFD] pb-32 animate-fade-in">
       {/* Header */}
@@ -73,10 +108,16 @@ const CheckoutPage = () => {
               <Ticket className="w-8 h-8 text-white" />
             </div>
             <div className="flex-1">
-              <h2 className="font-black text-lg leading-tight mb-2">Festival de Jazz</h2>
+              <h2 className="font-black text-lg leading-tight mb-2">{event.title}</h2>
               <div className="flex flex-col gap-1 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
-                <div className="flex items-center gap-1.5"><Calendar className="w-3 h-3" /> 24 Abr · 20:00</div>
-                <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3" /> Parque Metropolitano</div>
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-3 h-3" /> 
+                  {event.event_date} · {event.event_time}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="w-3 h-3" /> 
+                  {event.location}
+                </div>
               </div>
             </div>
           </div>
