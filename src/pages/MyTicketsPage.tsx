@@ -20,13 +20,8 @@ const MyTicketsPage = () => {
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const activeTickets = tickets
-    .filter(t => t.status === 'active')
-    .map(t => ({ ...t, event: mockEvents.find(e => e.id === Number(t.event_id)) || mockEvents[0] }));
-
-  const pastTickets = tickets
-    .filter(t => t.status !== 'active')
-    .map(t => ({ ...t, event: mockEvents.find(e => e.id === Number(t.event_id)) || mockEvents[0] }));
+  const activeTickets = tickets.filter(t => t.status === 'active');
+  const pastTickets = tickets.filter(t => t.status !== 'active');
 
   useEffect(() => {
     const fetchTickets = async () => {
@@ -35,7 +30,7 @@ const MyTicketsPage = () => {
         if (user) {
           const { data, error } = await supabase
             .from('tickets')
-            .select('*')
+            .select('*, events (*)')
             .eq('user_id', user.id)
             .order('purchase_date', { ascending: false });
 
@@ -111,7 +106,7 @@ const MyTicketsPage = () => {
 
           <TabsContent value="active" className="space-y-4">
             {activeTickets.length > 0 ? (
-              activeTickets.map(({ id, event, quantity, purchaseDate }) => (
+              activeTickets.map(({ id, events, quantity, purchase_date }) => (
                 <Card
                   key={id}
                   className="overflow-hidden border-none shadow-md bg-card group cursor-pointer hover:shadow-lg transition-all active:scale-[0.98]"
@@ -123,29 +118,29 @@ const MyTicketsPage = () => {
                       <div className="absolute -top-2 -right-2 w-4 h-4 bg-background rounded-full"></div>
                       <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-background rounded-full"></div>
 
-                      <span className="text-2xl mb-1">{event.emoji}</span>
+                      <span className="text-2xl mb-1">{events.emoji}</span>
                       <QrCode className="w-8 h-8 text-primary/40" />
                     </div>
 
                     <CardContent className="flex-1 p-4 space-y-2">
                       <div className="flex justify-between items-start">
-                        <h3 className="font-bold text-sm line-clamp-1">{event.title}</h3>
+                        <h3 className="font-bold text-sm line-clamp-1">{events.title}</h3>
                         <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded">x{quantity}</span>
                       </div>
 
                       <div className="space-y-1">
                         <div className="flex items-center gap-1.5 text-muted-foreground">
                           <Calendar className="w-3 h-3" />
-                          <span className="text-[10px]">{new Date(event.event_date || event.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}</span>
+                          <span className="text-[10px]">{new Date(events.event_date || events.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-muted-foreground">
                           <MapPin className="w-3 h-3" />
-                          <span className="text-[10px] line-clamp-1">{event.location}</span>
+                          <span className="text-[10px] line-clamp-1">{events.location}</span>
                         </div>
                       </div>
 
                       <div className="pt-2 flex justify-between items-center">
-                        <p className="text-[9px] text-muted-foreground italic">Comprado el {new Date(purchaseDate).toLocaleDateString()}</p>
+                        <p className="text-[9px] text-muted-foreground italic">Comprado el {new Date(purchase_date).toLocaleDateString()}</p>
                         <button className="text-[10px] font-bold text-primary group-hover:underline">Ver QR</button>
                       </div>
                     </CardContent>

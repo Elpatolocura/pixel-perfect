@@ -8,25 +8,53 @@ import {
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
+import { Loader2 } from 'lucide-react';
 
 const TicketDetailsPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  // Mock de datos del ticket
-  const ticket = {
-    eventName: "Festival de Jazz 2024",
-    organizer: "Blue Note Productions",
-    date: "Sábado, 24 de Mayo",
-    time: "20:00 - 02:00",
-    location: "Teatro Mayor Julio Mario Santo Domingo",
-    address: "Calle 170 # 67-51, Bogotá",
-    type: "VIP Experience",
-    seat: "Fila 4, Asiento 12",
-    price: "$250.00",
-    orderId: "#EV-98245",
-    qrCode: "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=EVENTIA-TICKET-98245"
-  };
+  const [ticketData, setTicketData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    const fetchTicketDetails = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('tickets')
+          .select('*, events (*)')
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+        setTicketData(data);
+      } catch (error) {
+        console.error(error);
+        toast.error('Ticket no encontrado');
+        navigate('/tickets');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) fetchTicketDetails();
+  }, [id, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground font-medium">Cargando tu ticket...</p>
+      </div>
+    );
+  }
+
+  if (!ticketData) return null;
+
+  const event = ticketData.events;
+  const qrCodeData = `EVENTIA-TICKET-${ticketData.id}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrCodeData}`;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12 animate-fade-in overflow-x-hidden">
@@ -52,10 +80,10 @@ const TicketDetailsPage = () => {
             <div className="flex justify-between items-start mb-8">
               <div className="space-y-1">
                 <span className="bg-primary/10 text-primary text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
-                  {ticket.type}
+                  {ticketData.zone || 'General'}
                 </span>
                 <h2 className="text-2xl font-black text-slate-900 leading-tight pt-2">
-                  {ticket.eventName}
+                  {event.title}
                 </h2>
               </div>
               <Avatar className="w-12 h-12 rounded-2xl border-2 border-slate-50 shadow-sm">
@@ -71,7 +99,7 @@ const TicketDetailsPage = () => {
                 </div>
                 <div>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Fecha</p>
-                  <p className="text-sm font-bold text-slate-700">{ticket.date}</p>
+                  <p className="text-sm font-bold text-slate-700">{new Date(event.event_date || event.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                 </div>
               </div>
 
@@ -81,7 +109,7 @@ const TicketDetailsPage = () => {
                 </div>
                 <div>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Hora</p>
-                  <p className="text-sm font-bold text-slate-700">{ticket.time}</p>
+                  <p className="text-sm font-bold text-slate-700">{event.event_time || event.time}</p>
                 </div>
               </div>
 
@@ -91,7 +119,7 @@ const TicketDetailsPage = () => {
                 </div>
                 <div className="flex-1">
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Lugar</p>
-                  <p className="text-sm font-bold text-slate-700 truncate">{ticket.location}</p>
+                  <p className="text-sm font-bold text-slate-700 truncate">{event.location}</p>
                 </div>
               </div>
             </div>
@@ -109,25 +137,25 @@ const TicketDetailsPage = () => {
             <div className="relative inline-block group">
               <div className="absolute -inset-4 bg-primary/5 rounded-[40px] blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <img 
-                src={ticket.qrCode} 
+                src={qrCodeUrl} 
                 alt="QR Code" 
                 className="w-48 h-48 mx-auto relative z-10 p-2 bg-white rounded-2xl border-2 border-slate-100"
               />
             </div>
             
             <div className="mt-6 space-y-1">
-              <p className="text-sm font-black text-slate-900 tracking-[0.3em]">{ticket.orderId}</p>
+              <p className="text-sm font-black text-slate-900 tracking-[0.3em]">#EV-{ticketData.id.slice(0, 8).toUpperCase()}</p>
               <p className="text-[11px] text-slate-400 font-bold">Presenta este código en la entrada</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4 mt-8 pt-6 border-t border-slate-50">
               <div className="text-left">
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Asiento</p>
-                <p className="text-sm font-black text-slate-900">{ticket.seat}</p>
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Cantidad</p>
+                <p className="text-sm font-black text-slate-900">x{ticketData.quantity}</p>
               </div>
               <div className="text-right">
                 <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Valor</p>
-                <p className="text-sm font-black text-slate-900">{ticket.price}</p>
+                <p className="text-sm font-black text-slate-900">${ticketData.total_price}</p>
               </div>
             </div>
           </div>
