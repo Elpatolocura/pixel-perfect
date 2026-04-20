@@ -10,11 +10,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import EventCard from '@/components/EventCard';
 
 const HomePage = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
+  const [priceFilter, setPriceFilter] = useState<'all' | 'free' | 'paid'>('all');
   const [events, setEvents] = useState<any[]>([]);
   const [userFavorites, setUserFavorites] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -25,6 +27,9 @@ const HomePage = () => {
     { name: 'Música', icon: <Music className="w-4 h-4" /> },
     { name: 'Arte', icon: <Palette className="w-4 h-4" /> },
     { name: 'Gastronomía', icon: <Utensils className="w-4 h-4" /> },
+    { name: 'Deportes', icon: <Sparkles className="w-4 h-4" /> },
+    { name: 'Tech', icon: <Sparkles className="w-4 h-4" /> },
+    { name: 'Bienestar', icon: <Sparkles className="w-4 h-4" /> },
   ];
 
   useEffect(() => {
@@ -80,15 +85,47 @@ const HomePage = () => {
     };
 
     fetchInitialData();
-  }, []);
+
+    // Realtime subscription for ALL events in the home page
+    const eventsSubscription = supabase
+      .channel('home-events-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'events' },
+        (payload) => {
+          console.log('Realtime update on HomePage:', payload);
+          
+          if (payload.eventType === 'INSERT') {
+            setEvents(prev => [payload.new, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            setEvents(prev => prev.map(e => e.id === payload.new.id ? { ...e, ...payload.new } : e));
+          } else if (payload.eventType === 'DELETE') {
+            setEvents(prev => prev.filter(e => e.id === payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(eventsSubscription);
+    };
+  }, [navigate]);
 
   const filteredEvents = useMemo(() => {
     return events.filter(event => {
-      const matchesCategory = selectedCategory === 'Todos' || event.category === selectedCategory;
+      const matchesCategory = selectedCategory === 'Todos' || 
+        (event.category && event.category.toLowerCase() === selectedCategory.toLowerCase());
+      
       const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
+      
+      const isFree = !event.price || Number(event.price) === 0 || event.price === 'Gratis';
+      const matchesPrice = priceFilter === 'all' || 
+        (priceFilter === 'free' && isFree) || 
+        (priceFilter === 'paid' && !isFree);
+
+      return matchesCategory && matchesSearch && matchesPrice;
     });
-  }, [selectedCategory, searchQuery, events]);
+  }, [selectedCategory, searchQuery, priceFilter, events]);
 
   const toggleFavorite = async (e: React.MouseEvent, eventId: string) => {
     e.stopPropagation();
@@ -172,7 +209,7 @@ const HomePage = () => {
       </div>
 
       {/* Categories Horizontal Scroll */}
-      <div className="px-6 mb-8 overflow-x-auto flex gap-3 no-scrollbar py-2 relative z-10">
+      <div className="px-6 mb-4 overflow-x-auto flex gap-3 no-scrollbar py-2 relative z-10">
         {categories.map((cat) => (
           <button
             key={cat.name}
@@ -191,6 +228,27 @@ const HomePage = () => {
         ))}
       </div>
 
+      {/* Entry Type Filter */}
+      <div className="px-6 mb-8 flex gap-2 relative z-10">
+        {[
+          { id: 'all', label: 'Cualquier precio' },
+          { id: 'free', label: 'Gratis' },
+          { id: 'paid', label: 'De pago' }
+        ].map((filter) => (
+          <button
+            key={filter.id}
+            onClick={() => setPriceFilter(filter.id as any)}
+            className={`px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all border ${
+              priceFilter === filter.id
+                ? 'bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-900/10'
+                : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200'
+            }`}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
+
       {/* Featured Events */}
       <div className="px-6 space-y-6">
         <div className="flex justify-between items-center">
@@ -205,73 +263,16 @@ const HomePage = () => {
 
         <div className="space-y-4">
           {filteredEvents.length > 0 ? (
-            filteredEvents.map((event) => (
-              <div 
-                key={event.id}
-                onClick={() => handleEventClick(event.id)}
-                className="group bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer"
-              >
-                <div className="relative h-48 overflow-hidden">
-                  <img 
-                    src={event.image_url || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800'} 
-                    alt={event.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-                  <div className="absolute top-4 right-4">
-                    <button 
-                      onClick={(e) => toggleFavorite(e, event.id)}
-                      className={`p-2.5 rounded-xl backdrop-blur-md border transition-all ${
-                        userFavorites.has(event.id)
-                          ? 'bg-red-500 border-red-500 text-white'
-                          : 'bg-white/20 border-white/20 text-white hover:bg-white hover:text-red-500'
-                      }`}
-                    >
-                      <Heart className={`w-4 h-4 ${userFavorites.has(event.id) ? 'fill-current' : ''}`} />
-                    </button>
-                  </div>
-                  <div className="absolute bottom-4 left-4">
-                    <Badge className="bg-white/90 backdrop-blur-sm text-slate-900 border-none px-3 py-1 font-black text-[10px]">
-                      {event.category}
-                    </Badge>
-                  </div>
-                </div>
-                
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-base font-black text-slate-900 leading-tight group-hover:text-primary transition-colors">
-                      {event.title}
-                    </h3>
-                    <span className="text-primary font-black text-sm">
-                      {event.price && event.price !== '0' && event.price !== 'Gratis' ? `$${event.price}` : 'Gratis'}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 text-slate-400 text-xs font-bold">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {event.event_date} • {event.event_time}
-                    </div>
-                  </div>
-
-                  <div className="mt-5 pt-5 border-t border-slate-50 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="flex -space-x-2">
-                        {[1,2,3].map(i => (
-                          <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-slate-200" />
-                        ))}
-                      </div>
-                      <span className="text-[10px] text-slate-400 font-bold">+{event.attendees_count || 0} asistirán</span>
-                    </div>
-                    <Button 
-                      size="sm" 
-                      className="rounded-xl bg-slate-900 text-white px-5 text-[10px] font-black uppercase tracking-widest h-9"
-                    >
-                      Ver más
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))
+            <div className="grid grid-cols-1 gap-6">
+              {filteredEvents.map((event) => (
+                <EventCard 
+                  key={event.id} 
+                  event={event} 
+                  isFavorite={userFavorites.has(event.id)}
+                  onFavoriteToggle={(e) => toggleFavorite(e, event.id)}
+                />
+              ))}
+            </div>
           ) : (
             <div className="py-20 text-center space-y-6 px-4 animate-in fade-in zoom-in-95 duration-500">
               <div className="relative w-28 h-28 mx-auto">

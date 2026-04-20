@@ -20,7 +20,9 @@ const BottomNav = () => {
     '/subscribe',
     '/my-events',
     '/notifications',
-    '/ticket'
+    '/ticket',
+    '/profile/following',
+    '/profile/followers'
   ];
 
   // Check if current path starts with any of the hidden paths

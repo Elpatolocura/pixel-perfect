@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { applyTheme } from '@/components/ThemeHandler';
 
 const ALL_INTERESTS = ['Música', 'Arte', 'Gastronomía', 'Deportes', 'Tecnología', 'Cine', 'Teatro', 'Bienestar'];
 
@@ -19,7 +20,8 @@ const SettingsPage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [membership, setMembership] = useState<string>('Basic');
   const [showAppearance, setShowAppearance] = useState(false);
-  const [accentColor, setAccentColor] = useState('indigo');
+  const [accentColor, setAccentColor] = useState(localStorage.getItem('app-accent-color') || 'indigo');
+  const [interfaceStyle, setInterfaceStyle] = useState(localStorage.getItem('app-interface-style') || 'Moderno');
 
   useEffect(() => {
     const fetchMembership = async () => {
@@ -166,7 +168,16 @@ const SettingsPage = () => {
                       if (item.path) {
                         navigate(item.path);
                       } else if (item.label === 'Apariencia y Temas') {
-                        setShowAppearance(true);
+                        if (membership === 'Basic') {
+                          toast.error('Esta función requiere un plan Pro o Business', {
+                            action: {
+                              label: 'Ver Planes',
+                              onClick: () => navigate('/premium')
+                            }
+                          });
+                        } else {
+                          setShowAppearance(true);
+                        }
                       } else if (item.label === 'Intereses y Categorías') {
                         setShowInterests(true);
                       } else if (item.label === 'Idioma') {
@@ -363,7 +374,7 @@ const SettingsPage = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Color de Acento</h3>
-                  {membership === 'Basic' && (
+                  {(membership === 'Basic') && (
                     <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 rounded-full border border-amber-100">
                       <Crown className="w-3 h-3 text-amber-500" />
                       <span className="text-[9px] font-black text-amber-600 uppercase">Requiere Pro</span>
@@ -371,12 +382,13 @@ const SettingsPage = () => {
                   )}
                 </div>
                 
-                <div className={`flex gap-3 ${membership === 'Basic' ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
+                <div className={`flex gap-3 ${(membership === 'Basic') ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
                   {ACCENT_COLORS.map(color => (
                     <button
                       key={color.id}
                       onClick={() => {
                         setAccentColor(color.id);
+                        applyTheme(color.id, interfaceStyle);
                         toast.success(`Color ${color.name} seleccionado`);
                       }}
                       className={`w-10 h-10 rounded-2xl ${color.color} transition-all active:scale-90 relative ${accentColor === color.id ? 'ring-4 ring-primary/20 scale-110 shadow-lg' : 'hover:scale-105'}`}
@@ -400,18 +412,32 @@ const SettingsPage = () => {
                 </div>
                 
                 <div className={`grid grid-cols-2 gap-3 ${membership !== 'Business' ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
-                  <button className="flex flex-col gap-2 p-3 rounded-2xl border-2 border-primary bg-primary/5 text-left transition-all">
+                  <button 
+                    onClick={() => {
+                      setInterfaceStyle('Moderno');
+                      applyTheme(accentColor, 'Moderno');
+                      toast.success('Estilo Moderno aplicado');
+                    }}
+                    className={`flex flex-col gap-2 p-3 rounded-2xl border-2 transition-all ${interfaceStyle === 'Moderno' ? 'border-primary bg-primary/5' : 'border-slate-100 bg-slate-50'}`}
+                  >
                     <div className="w-full aspect-video bg-white rounded-lg border border-slate-200 p-2 space-y-1">
                       <div className="w-8 h-1 bg-slate-200 rounded"></div>
                       <div className="w-12 h-1 bg-slate-100 rounded"></div>
                     </div>
                     <span className="text-xs font-bold">Moderno</span>
                   </button>
-                  <button className="flex flex-col gap-2 p-3 rounded-2xl border border-slate-100 bg-slate-50 text-left transition-all hover:bg-white hover:border-slate-200">
+                  <button 
+                    onClick={() => {
+                      setInterfaceStyle('Minimalista');
+                      applyTheme(accentColor, 'Minimalista');
+                      toast.success('Estilo Minimalista aplicado');
+                    }}
+                    className={`flex flex-col gap-2 p-3 rounded-2xl border-2 transition-all ${interfaceStyle === 'Minimalista' ? 'border-primary bg-primary/5' : 'border-slate-100 bg-slate-50'}`}
+                  >
                     <div className="w-full aspect-video bg-white rounded-lg border border-slate-200 p-2 flex items-center justify-center">
                       <div className="w-4 h-4 bg-slate-200 rounded-full"></div>
                     </div>
-                    <span className="text-xs font-bold text-slate-500">Minimalista</span>
+                    <span className="text-xs font-bold">Minimalista</span>
                   </button>
                 </div>
               </div>

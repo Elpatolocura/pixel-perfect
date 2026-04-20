@@ -96,3 +96,28 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Minimalist Style Overrides */
+.style-minimalist {
+  --radius: 0.4rem;
+}
+
+.style-minimalist .bg-card {
+  @apply border-none shadow-none bg-slate-50;
+}
+
+.style-minimalist button:not(.bg-primary) {
+  @apply rounded-lg;
+}
+
+.style-minimalist .shadow-xl {
+  @apply shadow-sm;
+}
+
+.style-minimalist .shadow-lg {
+  @apply shadow-sm;
+}
+
+.style-modern {
+  --radius: 1rem;
+}

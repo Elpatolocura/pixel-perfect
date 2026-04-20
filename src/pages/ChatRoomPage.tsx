@@ -241,6 +241,7 @@ const ChatRoomPage = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const currentUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (selectedUser) {
@@ -290,13 +291,12 @@ const ChatRoomPage = () => {
   useEffect(() => {
     if (!id) return;
 
-    let currentUser: any = null;
-
     const fetchInitialData = async () => {
       try {
         const { data: { user: authUser } } = await supabase.auth.getUser();
         if (!authUser) return;
-        currentUser = authUser;
+        // Store in ref so the Realtime listener always has access
+        currentUserIdRef.current = authUser.id;
 
         // Fetch room info with members
         const { data: room, error: roomError } = await supabase
@@ -330,31 +330,39 @@ const ChatRoomPage = () => {
         
         setRoomInfo(room);
 
-        // Fetch initial messages
+        // Fetch initial messages — use explicit alias to avoid PostgREST name collision
         const { data: messages, error } = await supabase
           .from('chat_messages')
           .select(`
             *,
-            profiles:sender_id (full_name, avatar_url, role)
+            sender:sender_id (full_name, avatar_url, role)
           `)
           .eq('room_id', id)
           .order('created_at', { ascending: true });
 
         if (error) throw error;
 
-        const formattedMessages = messages?.map(m => ({
+        const formattedMessages = (messages || []).map(m => ({
           id: m.id,
-          user: m.profiles?.full_name || 'Usuario',
-          avatar: m.profiles?.avatar_url || 'https://i.pravatar.cc/150',
-          role: m.profiles?.role || 'Asistente',
+          user: m.sender?.full_name || 'Usuario',
+          avatar: m.sender?.avatar_url || 'https://i.pravatar.cc/150',
+          role: m.sender?.role || 'Asistente',
           text: m.text,
           images: m.images || [],
           video: m.video_url,
           time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           isMe: m.sender_id === authUser.id,
           sender_id: m.sender_id,
-          replyTo: m.reply_to_id ? messages.find(prev => prev.id === m.reply_to_id) : null
-        })) || [];
+          replyTo: null as any
+        }));
+
+        // Link replyTo after all messages are formatted
+        formattedMessages.forEach(m => {
+          const raw = (messages || []).find(r => r.id === m.id);
+          if (raw?.reply_to_id) {
+            m.replyTo = formattedMessages.find(fm => fm.id === raw.reply_to_id) || null;
+          }
+        });
 
         setChatMessages(formattedMessages);
       } catch (error) {
@@ -376,38 +384,33 @@ const ChatRoomPage = () => {
         table: 'chat_messages',
         filter: `room_id=eq.${id}`
       }, async (payload) => {
-        // Prevent duplicate messages in UI
+        // Fetch sender profile and add to state — deduplication happens via id check
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, avatar_url, role')
+          .eq('id', payload.new.sender_id)
+          .single();
+
         setChatMessages(prev => {
+          // Prevent duplicate
           if (prev.some(m => m.id === payload.new.id)) return prev;
-          
-          // If message is not in list, fetch profile and add it
-          (async () => {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('full_name, avatar_url, role')
-              .eq('id', payload.new.sender_id)
-              .single();
 
-            const newMessage = {
-              id: payload.new.id,
-              user: profile?.full_name || 'Usuario',
-              avatar: profile?.avatar_url || 'https://i.pravatar.cc/150',
-              role: profile?.role || 'Asistente',
-              text: payload.new.text,
-              images: payload.new.images || [],
-              video_url: payload.new.video_url,
-              time: new Date(payload.new.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              isMe: payload.new.sender_id === currentUser?.id,
-              sender_id: payload.new.sender_id,
-              reply_to_id: payload.new.reply_to_id,
-              // Link the replyTo object from the current list
-              replyTo: payload.new.reply_to_id ? prev.find(m => m.id === payload.new.reply_to_id) : null
-            };
+          const newMessage = {
+            id: payload.new.id,
+            user: profile?.full_name || 'Usuario',
+            avatar: profile?.avatar_url || 'https://i.pravatar.cc/150',
+            role: profile?.role || 'Asistente',
+            text: payload.new.text,
+            images: payload.new.images || [],
+            video: payload.new.video_url,
+            time: new Date(payload.new.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            // Use the ref — always correct even after async operations
+            isMe: payload.new.sender_id === currentUserIdRef.current,
+            sender_id: payload.new.sender_id,
+            replyTo: payload.new.reply_to_id ? prev.find(m => m.id === payload.new.reply_to_id) || null : null
+          };
 
-            setChatMessages(current => [...current, newMessage]);
-          })();
-          
-          return prev;
+          return [...prev, newMessage];
         });
       })
       .subscribe();

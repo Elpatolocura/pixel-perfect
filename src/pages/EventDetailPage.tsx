@@ -35,6 +35,56 @@ const EventDetailPage = () => {
   const [followers, setFollowers] = useState<any[]>([]);
 
   useEffect(() => {
+    if (!id) return;
+
+    const fetchSecondaryData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          // Check favorites
+          const { data: favData } = await supabase
+            .from('favorites')
+            .select('id')
+            .eq('event_id', id)
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          if (favData) {
+            setIsFavorite(true);
+            setFavoriteId(favData.id);
+          }
+
+          // Check following
+          const { data: followData } = await supabase
+            .from('event_followers')
+            .select('id')
+            .eq('event_id', id)
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          setIsFollowing(!!followData);
+        }
+
+        // Fetch some follower avatars
+        const { data: followersData } = await supabase
+          .from('event_followers')
+          .select(`
+            user_id,
+            profiles (
+              avatar_url
+            )
+          `)
+          .eq('event_id', id)
+          .limit(5);
+        
+        if (followersData) {
+          setFollowers(followersData.map(f => (f as any).profiles?.avatar_url).filter(Boolean));
+        }
+      } catch (e) {
+        console.error("Secondary data fetch failed:", e);
+      }
+    };
+
     const fetchEvent = async () => {
       try {
         const { data, error } = await supabase
@@ -45,56 +95,6 @@ const EventDetailPage = () => {
 
         if (error) throw error;
         setEvent(data);
-
-        // Fetch secondary data without breaking the main flow
-        const fetchSecondaryData = async () => {
-          try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-              // Check favorites
-              const { data: favData } = await supabase
-                .from('favorites')
-                .select('id')
-                .eq('event_id', id)
-                .eq('user_id', user.id)
-                .maybeSingle();
-              
-              if (favData) {
-                setIsFavorite(true);
-                setFavoriteId(favData.id);
-              }
-
-              // Check following
-              const { data: followData } = await supabase
-                .from('event_followers')
-                .select('id')
-                .eq('event_id', id)
-                .eq('user_id', user.id)
-                .maybeSingle();
-              
-              setIsFollowing(!!followData);
-            }
-
-            // Fetch some follower avatars
-            const { data: followersData } = await supabase
-              .from('event_followers')
-              .select(`
-                user_id,
-                profiles (
-                  avatar_url
-                )
-              `)
-              .eq('event_id', id)
-              .limit(5);
-            
-            if (followersData) {
-              setFollowers(followersData.map(f => (f as any).profiles?.avatar_url).filter(Boolean));
-            }
-          } catch (e) {
-            console.error("Secondary data fetch failed:", e);
-          }
-        };
-
         fetchSecondaryData();
 
       } catch (error) {
@@ -106,9 +106,38 @@ const EventDetailPage = () => {
       }
     };
 
-    if (id) {
-      fetchEvent();
-    }
+    fetchEvent();
+
+    // Realtime subscription for event updates
+    const eventSubscription = supabase
+      .channel(`event-updates-${id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'events', filter: `id=eq.${id}` },
+        (payload) => {
+          console.log('Event updated in real-time:', payload.new);
+          setEvent((prev: any) => ({ ...prev, ...payload.new }));
+        }
+      )
+      .subscribe();
+
+    // Realtime subscription for followers
+    const followersSubscription = supabase
+      .channel(`followers-updates-${id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'event_followers', filter: `event_id=eq.${id}` },
+        () => {
+          console.log('Followers changed, refreshing...');
+          fetchSecondaryData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(eventSubscription);
+      supabase.removeChannel(followersSubscription);
+    };
   }, [id, navigate]);
 
   const toggleFavorite = async () => {
@@ -508,13 +537,16 @@ const EventDetailPage = () => {
 
         {/* Organizer Section */}
         <div className="flex items-center justify-between p-2 pl-4 pr-2 bg-slate-50 rounded-full border border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full overflow-hidden shadow-sm border-2 border-white">
+          <div 
+            className="flex items-center gap-3 cursor-pointer group"
+            onClick={() => navigate(`/profile/u/${event.organizer_id}`)}
+          >
+            <div className="w-12 h-12 rounded-full overflow-hidden shadow-sm border-2 border-white group-hover:scale-110 transition-transform">
                <img src={event.organizer_avatar || `https://i.pravatar.cc/150?u=${event.organizer_id}`} alt={event.organizer_name || 'Organizador'} className="w-full h-full object-cover" />
             </div>
             <div>
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Organizador</p>
-              <h4 className="text-sm font-black text-slate-900">{event.organizer_name || 'Organizador Anónimo'}</h4>
+              <h4 className="text-sm font-black text-slate-900 group-hover:text-primary transition-colors">{event.organizer_name || 'Organizador Anónimo'}</h4>
             </div>
           </div>
           <button 

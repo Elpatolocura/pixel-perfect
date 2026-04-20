@@ -7,42 +7,76 @@ import { supabase } from '@/lib/supabase';
 interface EventCardProps {
   event: EventData;
   variant?: 'large' | 'small';
+  isFavorite?: boolean;
+  onFavoriteToggle?: (e: React.MouseEvent) => void;
 }
 
-const EventCard = ({ event, variant = 'large' }: EventCardProps) => {
+const EventCard = ({ event, variant = 'large', isFavorite: isFavProp, onFavoriteToggle }: EventCardProps) => {
   const navigate = useNavigate();
 
   const [followerAvatars, setFollowerAvatars] = useState<string[]>([]);
+  const [liveEvent, setLiveEvent] = useState(event);
+
+  const fetchFollowers = async () => {
+    const { data } = await supabase
+      .from('event_followers')
+      .select(`
+        profiles (
+          avatar_url
+        )
+      `)
+      .eq('event_id', event.id)
+      .limit(3);
+    
+    if (data) {
+      setFollowerAvatars(
+        data
+          .map((f: any) => f.profiles?.avatar_url as string | undefined)
+          .filter((a): a is string => typeof a === 'string' && a.length > 0)
+      );
+    }
+  };
 
   useEffect(() => {
-    const fetchFollowers = async () => {
-      const { data } = await supabase
-        .from('event_followers')
-        .select(`
-          profiles (
-            avatar_url
-          )
-        `)
-        .eq('event_id', event.id)
-        .limit(3);
-      
-      if (data) {
-        setFollowerAvatars(
-          data
-            .map((f: any) => f.profiles?.avatar_url as string | undefined)
-            .filter((a): a is string => typeof a === 'string' && a.length > 0)
-        );
+    setLiveEvent(event);
+    if (event.id) {
+      fetchFollowers();
 
-      }
-    };
+      // Realtime for followers
+      const followersChannel = supabase
+        .channel(`card-followers-${event.id}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'event_followers', filter: `event_id=eq.${event.id}` },
+          () => fetchFollowers()
+        )
+        .subscribe();
 
-    fetchFollowers();
-  }, [event.id]);
+      // Realtime for event data
+      const eventChannel = supabase
+        .channel(`card-event-${event.id}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'events', filter: `id=eq.${event.id}` },
+          (payload) => {
+            setLiveEvent((prev: any) => ({ ...prev, ...payload.new }));
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(followersChannel);
+        supabase.removeChannel(eventChannel);
+      };
+    }
+  }, [event.id, event]);
+
+  const displayEvent = liveEvent;
 
   if (variant === 'small') {
     return (
       <button
-        onClick={() => navigate(`/event/${event.id}`)}
+        onClick={() => navigate(`/event/${displayEvent.id}`)}
         className="bg-card rounded-2xl p-3.5 border border-border text-left min-w-[150px] flex-shrink-0 transition-shadow hover:shadow-md"
       >
         <div className="h-16 w-full bg-secondary rounded-xl overflow-hidden mb-2">
@@ -64,7 +98,7 @@ const EventCard = ({ event, variant = 'large' }: EventCardProps) => {
 
   return (
     <button
-      onClick={() => navigate(`/event/${event.id}`)}
+      onClick={() => navigate(`/event/${displayEvent.id}`)}
       className="bg-card rounded-2xl overflow-hidden border border-border text-left w-full transition-shadow hover:shadow-md"
     >
       <div className="h-40 bg-secondary flex items-center justify-center text-5xl relative overflow-hidden">
@@ -75,10 +109,27 @@ const EventCard = ({ event, variant = 'large' }: EventCardProps) => {
             {event.emoji || '📅'}
           </div>
         )}
-        <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-card/80 backdrop-blur flex items-center justify-center">
-          <Heart
-            className={`w-4 h-4 ${event.isFavorite ? 'fill-destructive text-destructive' : 'text-foreground/60'}`}
-          />
+        <div className="absolute top-4 left-4">
+          <div className="bg-white/90 backdrop-blur-sm text-slate-900 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider shadow-sm">
+            {event.category}
+          </div>
+        </div>
+        <div className="absolute top-3 right-3">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onFavoriteToggle?.(e);
+            }}
+            className={`w-10 h-10 rounded-xl backdrop-blur-md flex items-center justify-center transition-all border ${
+              isFavProp 
+                ? 'bg-red-500 border-red-500 text-white' 
+                : 'bg-white/20 border-white/20 text-white hover:bg-white hover:text-red-500'
+            }`}
+          >
+            <Heart
+              className={`w-4 h-4 ${isFavProp ? 'fill-current' : ''}`}
+            />
+          </button>
         </div>
       </div>
       <div className="p-4">

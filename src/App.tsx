@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import BottomNav from "@/components/BottomNav";
+import NotificationManager from "@/components/NotificationManager";
+import ThemeHandler from "@/components/ThemeHandler";
 import HomePage from "@/pages/HomePage";
 import ExplorePage from "@/pages/ExplorePage";
 import EventDetailPage from "@/pages/EventDetailPage";
@@ -29,6 +31,7 @@ import PremiumPage from "@/pages/PremiumPage";
 import CheckoutPage from "@/pages/CheckoutPage";
 import SubscriptionCheckoutPage from "@/pages/SubscriptionCheckoutPage";
 import LegalPage from "@/pages/LegalPage";
+import FollowsPage from "@/pages/FollowsPage";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -39,6 +42,8 @@ const App = () => (
       <Toaster />
       <Sonner position="top-center" duration={2000} />
       <BrowserRouter>
+        <NotificationManager />
+        <ThemeHandler />
         <div className="app-container">
           <Routes>
             <Route path="/" element={<HomePage />} />
@@ -51,6 +56,8 @@ const App = () => (
             <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
             <Route path="/checkout/:id" element={<CheckoutPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/u/:id" element={<ProfilePage />} />
+            <Route path="/profile/:type" element={<FollowsPage />} />
             <Route path="/profile/edit" element={<EditProfilePage />} />
             <Route path="/premium" element={<PremiumPage />} />
             <Route path="/subscribe/:planId" element={<SubscriptionCheckoutPage />} />
