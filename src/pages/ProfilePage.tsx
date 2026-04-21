@@ -1,5 +1,5 @@
 import { mockTickets, mockEvents, mockNotifications } from '@/data/mockData';
-import { Settings, Ticket, Heart, CalendarDays, ChevronRight, Crown, LogOut, User, Bell, ChevronLeft, UserPlus, UserCheck } from 'lucide-react';
+import { Settings, Ticket, Heart, CalendarDays, ChevronRight, Crown, LogOut, User, Bell, ChevronLeft, UserPlus, UserCheck, MessageSquare } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -101,6 +101,70 @@ const ProfilePage = () => {
 
     checkUser();
   }, [id]);
+
+  const handlePrivateChat = async () => {
+    if (!user || !id) return;
+    
+    setLoading(true);
+    try {
+      // 1. Find if a private room already exists between these two
+      const { data: rooms } = await supabase
+        .from('chat_rooms')
+        .select(`
+          id,
+          chat_room_members!inner(user_id)
+        `)
+        .eq('type', 'private')
+        .eq('chat_room_members.user_id', user.id);
+      
+      // Post-filter to find the one where the OTHER user is also a member
+      let existingRoomId = null;
+      if (rooms) {
+        for (const room of rooms) {
+          const { data: members } = await supabase
+            .from('chat_room_members')
+            .select('user_id')
+            .eq('room_id', room.id);
+          
+          if (members?.some(m => m.user_id === id)) {
+            existingRoomId = room.id;
+            break;
+          }
+        }
+      }
+
+      let targetRoomId = existingRoomId;
+
+      // 2. If not, create it
+      if (!targetRoomId) {
+        const { data: newRoom, error: roomError } = await supabase
+          .from('chat_rooms')
+          .insert({
+            name: 'Chat Privado',
+            type: 'private',
+            participants_count: 2
+          })
+          .select()
+          .single();
+        
+        if (roomError) throw roomError;
+        targetRoomId = newRoom.id;
+
+        // Add both members
+        await supabase.from('chat_room_members').insert([
+          { room_id: targetRoomId, user_id: user.id },
+          { room_id: targetRoomId, user_id: id }
+        ]);
+      }
+
+      navigate(`/chat/${targetRoomId}`);
+    } catch (error) {
+      console.error("Error creating chat:", error);
+      toast.error('No se pudo abrir el chat');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleFollowToggle = async () => {
     if (!user) {
@@ -255,13 +319,23 @@ const ProfilePage = () => {
                 <span className="flex items-center gap-2"><UserPlus className="w-4 h-4" /> Seguir</span>
               )}
             </Button>
-            <Button 
-              variant="outline"
-              className="h-12 w-12 rounded-2xl p-0 border-border"
-              onClick={() => toast.info('Función de mensaje próximamente')}
-            >
-              <Bell className="w-4 h-4" />
-            </Button>
+            {isFollowing ? (
+              <Button 
+                variant="outline"
+                className="h-12 w-12 rounded-2xl p-0 border-border bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100"
+                onClick={handlePrivateChat}
+              >
+                <MessageSquare className="w-5 h-5" />
+              </Button>
+            ) : (
+              <Button 
+                variant="outline"
+                className="h-12 w-12 rounded-2xl p-0 border-border"
+                onClick={() => toast.info('Sigue a este usuario para enviar mensajes')}
+              >
+                <Bell className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         )}
 

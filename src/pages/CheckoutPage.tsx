@@ -72,7 +72,7 @@ const CheckoutPage = () => {
       if (error) throw error;
 
       toast.success('¡Compra realizada con éxito! Revisa tu email.');
-      setTimeout(() => navigate('/tickets'), 2000);
+      setTimeout(() => navigate(`/event/${id}`), 2000);
     } catch (error: any) {
       toast.error('Error al procesar la compra: ' + error.message);
       console.error(error);

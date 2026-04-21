@@ -153,6 +153,26 @@ const CreateEventPage = () => {
 
       if (eventError) throw eventError;
 
+      // 1b. Create Event Chat Room
+      const { data: chatRoom, error: chatError } = await supabase
+        .from('chat_rooms')
+        .insert({
+          name: `${form.title} — Chat`,
+          event_id: event.id,
+          type: 'event',
+          participants_count: 1 // Organizer is first
+        })
+        .select()
+        .single();
+
+      if (!chatError && chatRoom) {
+        // Add organizer as member
+        await supabase.from('chat_room_members').insert({
+          room_id: chatRoom.id,
+          user_id: user.id
+        });
+      }
+
       // 2. Insert Extra Images if any
       if (form.extraImages.length > 0) {
         const imageInserts = form.extraImages.map(url => ({

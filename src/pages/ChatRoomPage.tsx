@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Ticket, UserPlus, Lock, ShieldOff } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -45,17 +45,36 @@ const MessageBubble = ({
   openImageViewer, 
   onDelete, 
   onReply,
-  onScrollToMessage 
+  onScrollToMessage,
+  onProfileLongPress
 }: { 
   msg: any, 
   openUserProfile: (user: any) => void, 
   openImageViewer: (images: string[], index: number) => void, 
   onDelete: (id: number) => void, 
   onReply: (msg: any) => void,
-  onScrollToMessage: (id: number) => void
+  onScrollToMessage: (id: number) => void,
+  onProfileLongPress: (userId: string) => void
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const CHAR_LIMIT = 200;
+
+  const handleStart = () => {
+    longPressTimer.current = setTimeout(() => {
+      onProfileLongPress(msg.sender_id);
+      // Optional: haptic feedback if available
+      if (window.navigator && window.navigator.vibrate) {
+        window.navigator.vibrate(50);
+      }
+    }, 800);
+  };
+
+  const handleEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+    }
+  };
   
   const isLongMessage = (msg.text?.length || 0) > CHAR_LIMIT;
   const displayText = isLongMessage && !isExpanded ? msg.text.slice(0, CHAR_LIMIT) + '...' : msg.text;
@@ -68,18 +87,21 @@ const MessageBubble = ({
       className={`flex w-full items-end gap-3.5 transition-all duration-500 ${msg.isMe ? 'flex-row-reverse' : ''}`}
     >
       {!msg.isMe && (
-        <button 
-          onClick={() => openUserProfile(msg)}
-          className="w-11 h-11 rounded-[20px] overflow-hidden shadow-lg border-2 border-white hover:scale-110 active:scale-95 transition-all shrink-0 mb-1"
+        <div 
+          onMouseDown={handleStart}
+          onMouseUp={handleEnd}
+          onMouseLeave={handleEnd}
+          onTouchStart={handleStart}
+          onTouchEnd={handleEnd}
+          className="w-11 h-11 rounded-[20px] overflow-hidden shadow-lg border-2 border-white shrink-0 mb-1 active:scale-95 active:opacity-80 transition-all cursor-pointer"
         >
-          <img src={msg.avatar} alt={msg.user} className="w-full h-full object-cover" />
-        </button>
+          <img src={msg.avatar} alt={msg.user} className="w-full h-full object-cover select-none pointer-events-none" />
+        </div>
       )}
       <div className={`flex flex-col gap-1.5 max-w-[78%] min-w-0 ${msg.isMe ? 'items-end' : ''}`}>
         {!msg.isMe && (
           <span 
-            onClick={() => openUserProfile(msg)}
-            className="text-[10px] font-black text-slate-400 ml-3 hover:text-primary cursor-pointer transition-colors uppercase tracking-widest"
+            className="text-[10px] font-black text-slate-400 ml-3 uppercase tracking-widest"
           >
             {msg.user}
           </span>
@@ -287,6 +309,9 @@ const ChatRoomPage = () => {
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [roomInfo, setRoomInfo] = useState<any>(null);
+  const [accessStatus, setAccessStatus] = useState<'checking' | 'granted' | 'denied_ticket' | 'denied_follow'>('checking');
+  const [deniedEventId, setDeniedEventId] = useState<string | null>(null);
+  const [recentFollowers, setRecentFollowers] = useState<any[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -298,12 +323,30 @@ const ChatRoomPage = () => {
         // Store in ref so the Realtime listener always has access
         currentUserIdRef.current = authUser.id;
 
-        // Fetch room info with members
+        // Ensure user has a profile record to satisfy foreign key constraints for messages
+        const { data: profileCheck } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', authUser.id)
+          .maybeSingle();
+        
+        if (!profileCheck) {
+          console.log("Profile missing, creating basic profile...");
+          await supabase.from('profiles').insert({
+            id: authUser.id,
+            full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Usuario',
+            avatar_url: authUser.user_metadata?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
+            role: 'user'
+          });
+        }
+
+        // Fetch room info with members and event details
         const { data: room, error: roomError } = await supabase
           .from('chat_rooms')
           .select(`
             *,
-            chat_room_members (user_id)
+            chat_room_members (user_id),
+            events (*)
           `)
           .eq('id', id)
           .single();
@@ -326,12 +369,98 @@ const ChatRoomPage = () => {
               room.avatar = profile.avatar_url;
             }
           }
+        } else if (room.type === 'event' && room.events) {
+          // Use event details for the room info
+          room.name = room.events.title;
+          room.avatar = room.events.image_url;
+          room.event_date = room.events.event_date;
         }
         
         setRoomInfo(room);
 
-        // Fetch initial messages — use explicit alias to avoid PostgREST name collision
-        const { data: messages, error } = await supabase
+        // ── ACCESS CONTROL GATE ──────────────────────────────────────
+        if (room.type === 'event') {
+          // Check if user has a valid ticket for the event
+          if (room.event_id) {
+            const { data: ticket } = await supabase
+              .from('tickets')
+              .select('id')
+              .eq('user_id', authUser.id)
+              .eq('event_id', room.event_id)
+              .eq('status', 'active')
+              .maybeSingle();
+
+            if (!ticket) {
+              setDeniedEventId(room.event_id);
+              setAccessStatus('denied_ticket');
+              setLoading(false);
+              return;
+            }
+          }
+        } else if (room.type === 'private') {
+          // If the user is already a member of this room (was added when the chat was created),
+          // grant access immediately — no follow check needed.
+          const alreadyMember = room.chat_room_members?.some((m: any) => m.user_id === authUser.id);
+
+          if (!alreadyMember) {
+            // User is NOT a member: check if they follow the other person
+            const otherMember = room.chat_room_members?.find((m: any) => m.user_id !== authUser.id);
+            if (otherMember) {
+              const { data: follow } = await supabase
+                .from('follows')
+                .select('id')
+                .eq('follower_id', authUser.id)
+                .eq('following_id', otherMember.user_id)
+                .maybeSingle();
+
+              if (!follow) {
+                setAccessStatus('denied_follow');
+                setLoading(false);
+                return;
+              }
+            }
+          }
+        }
+
+        setAccessStatus('granted');
+
+        // Fetch recent followers for event rooms
+        if (room.type === 'event' && room.event_id) {
+          const { data: favs } = await supabase
+            .from('favorites')
+            .select('user_id, created_at')
+            .eq('event_id', room.event_id)
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+          if (favs && favs.length > 0) {
+            const userIds = favs.map((f: any) => f.user_id);
+            const { data: profilesData } = await supabase
+              .from('profiles')
+              .select('id, full_name, avatar_url')
+              .in('id', userIds);
+
+            const profileMap = Object.fromEntries((profilesData || []).map((p: any) => [p.id, p]));
+            setRecentFollowers(favs.map((f: any) => ({
+              id: f.user_id,
+              name: profileMap[f.user_id]?.full_name || 'Usuario',
+              avatar: profileMap[f.user_id]?.avatar_url || null,
+              joined_at: f.created_at
+            })));
+          }
+        }
+
+
+        // Ensure user is in chat_room_members to pass RLS for sending messages
+        const isMember = room.chat_room_members?.some((m: any) => m.user_id === authUser.id);
+        if (!isMember) {
+          await supabase
+            .from('chat_room_members')
+            .upsert({ room_id: id, user_id: authUser.id }, { onConflict: 'room_id,user_id' });
+        }
+
+        // Fetch initial messages
+        const { data: messages, error: msgsError } = await supabase
           .from('chat_messages')
           .select(`
             *,
@@ -340,7 +469,7 @@ const ChatRoomPage = () => {
           .eq('room_id', id)
           .order('created_at', { ascending: true });
 
-        if (error) throw error;
+        if (msgsError) throw msgsError;
 
         const formattedMessages = (messages || []).map(m => ({
           id: m.id,
@@ -534,6 +663,98 @@ const ChatRoomPage = () => {
     );
   }
 
+  // ── ACCESS DENIED: No ticket ────────────────────────────────────────
+  if (accessStatus === 'denied_ticket') {
+    return (
+      <div className="h-screen bg-[#F8FAFC] flex flex-col">
+        <header className="px-6 py-5 bg-white border-b border-slate-100 flex items-center gap-4 shadow-sm shrink-0">
+          <button onClick={() => navigate(-1)} className="p-2.5 rounded-2xl hover:bg-slate-50 transition-all">
+            <ArrowLeft className="w-5 h-5 text-slate-900" />
+          </button>
+          <h1 className="text-[15px] font-black text-slate-900">Chat del Evento</h1>
+        </header>
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+          <div className="w-24 h-24 rounded-[32px] bg-amber-50 border border-amber-100 flex items-center justify-center mb-6 shadow-inner">
+            <Ticket className="w-12 h-12 text-amber-400" />
+          </div>
+          <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+            style={{ backgroundImage: `repeating-linear-gradient(45deg, #f59e0b 0, #f59e0b 1px, transparent 0, transparent 50%)`, backgroundSize: '20px 20px' }}
+          />
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Acceso Bloqueado</h2>
+          <p className="text-slate-500 text-[14px] font-medium leading-relaxed mb-2 max-w-xs">
+            Necesitas un <strong className="text-slate-700">ticket válido</strong> para participar en el chat grupal de este evento.
+          </p>
+          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-10">
+            El chat se activa automáticamente al obtener tu entrada
+          </p>
+          <div className="w-full max-w-xs space-y-3">
+            <Button
+              onClick={() => navigate(deniedEventId ? `/event/${deniedEventId}` : '/')}
+              className="w-full h-14 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black uppercase tracking-widest text-[11px] shadow-xl shadow-amber-500/20"
+            >
+              <Ticket className="w-4 h-4 mr-2" /> Obtener Mi Ticket
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate(-1)}
+              className="w-full h-12 rounded-2xl border-slate-200 font-bold text-slate-600 text-[12px]"
+            >
+              Volver
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── ACCESS DENIED: No mutual follow ────────────────────────────────
+  if (accessStatus === 'denied_follow') {
+    return (
+      <div className="h-screen bg-[#F8FAFC] flex flex-col">
+        <header className="px-6 py-5 bg-white border-b border-slate-100 flex items-center gap-4 shadow-sm shrink-0">
+          <button onClick={() => navigate(-1)} className="p-2.5 rounded-2xl hover:bg-slate-50 transition-all">
+            <ArrowLeft className="w-5 h-5 text-slate-900" />
+          </button>
+          <h1 className="text-[15px] font-black text-slate-900">Chat Privado</h1>
+        </header>
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+          <div className="w-24 h-24 rounded-[32px] bg-slate-100 border border-slate-200 flex items-center justify-center mb-6 shadow-inner">
+            <Lock className="w-12 h-12 text-slate-400" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Chat Bloqueado</h2>
+          <p className="text-slate-500 text-[14px] font-medium leading-relaxed mb-2 max-w-xs">
+            Para chatear en privado, <strong className="text-slate-700">ambos usuarios deben seguirse mutuamente</strong>.
+          </p>
+          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-10">
+            Sigue a este usuario y espera a que te siga de vuelta
+          </p>
+          <div className="w-full max-w-xs space-y-3">
+            <Button
+              onClick={() => {
+                const otherMember = roomInfo?.chat_room_members?.find((m: any) => m.user_id !== currentUserIdRef.current);
+                if (otherMember) {
+                  navigate(`/profile/${otherMember.user_id}`);
+                } else {
+                  navigate(-1);
+                }
+              }}
+              className="w-full h-14 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-widest text-[11px] shadow-xl shadow-slate-900/10"
+            >
+              <UserPlus className="w-4 h-4 mr-2" /> Ir al Perfil del Usuario
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/chat')}
+              className="w-full h-12 rounded-2xl border-slate-200 font-bold text-slate-600 text-[12px]"
+            >
+              Ver Mis Chats
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-[#F8FAFC] overflow-hidden animate-fade-in">
       {/* Chat Header */}
@@ -544,7 +765,7 @@ const ChatRoomPage = () => {
           </button>
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-11 h-11 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-black shadow-lg shadow-slate-900/10 overflow-hidden">
+              <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-black shadow-lg shadow-slate-900/10 overflow-hidden">
                 {roomInfo?.avatar ? (
                   <img src={roomInfo.avatar} alt={roomInfo.name} className="w-full h-full object-cover" />
                 ) : (
@@ -554,10 +775,21 @@ const ChatRoomPage = () => {
               <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></div>
             </div>
             <div>
-              <h1 className="text-[15px] font-black text-slate-900 leading-none mb-1">{roomInfo?.name || 'Chat'}</h1>
-              <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                <p className="text-[10px] text-green-600 font-bold uppercase tracking-widest">En línea</p>
+              <h1 className="text-[15px] font-black text-slate-900 leading-none mb-1.5 truncate max-w-[150px] sm:max-w-[200px]">
+                {roomInfo?.name || 'Chat'}
+              </h1>
+              <div className="flex items-center gap-2">
+                {roomInfo?.event_date ? (
+                  <div className="flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-full border border-primary/10">
+                    <Calendar className="w-3 h-3 text-primary" />
+                    <span className="text-[9px] text-primary font-black uppercase tracking-widest">{roomInfo.event_date}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                    <p className="text-[10px] text-green-600 font-bold uppercase tracking-widest">En línea</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -611,6 +843,40 @@ const ChatRoomPage = () => {
           </span>
         </div>
 
+        {/* Recent Followers Strip — only for event rooms */}
+        {roomInfo?.type === 'event' && recentFollowers.length > 0 && (
+          <div className="relative z-10 -mx-6 px-6">
+            <div className="bg-white/60 backdrop-blur-sm border border-slate-100/60 rounded-3xl p-4 mb-2 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-300" />
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Siguiendo este evento</p>
+              </div>
+              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+                {recentFollowers.map((follower) => (
+                  <button
+                    key={follower.id}
+                    onClick={() => navigate(`/profile/u/${follower.id}`)}
+                    className="flex flex-col items-center gap-1.5 shrink-0 group"
+                  >
+                    <div className="w-11 h-11 rounded-[16px] overflow-hidden border-2 border-white shadow-md group-hover:scale-110 group-hover:shadow-lg transition-all bg-primary/10">
+                      {follower.avatar ? (
+                        <img src={follower.avatar} alt={follower.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <User className="w-5 h-5 text-primary" />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-wide max-w-[52px] text-center leading-tight truncate group-hover:text-primary transition-colors">
+                      {follower.name.split(' ')[0]}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {chatMessages.map((msg) => (
           <MessageBubble 
             key={msg.id} 
@@ -620,6 +886,7 @@ const ChatRoomPage = () => {
             onDelete={handleDeleteMessage}
             onReply={setReplyingTo}
             onScrollToMessage={scrollToMessage}
+            onProfileLongPress={(userId) => navigate(`/profile/u/${userId}`)}
           />
         ))}
       </div>

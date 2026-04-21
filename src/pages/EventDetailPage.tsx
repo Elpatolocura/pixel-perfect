@@ -1,16 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, Calendar, MapPin, Users, Share2, 
-  Heart, MessageSquare, Info, Lock,
+import {
+  ArrowLeft, Calendar, MapPin, Users, User, Share2,
+  Heart, MessageSquare, Info, Lock, Star, Send,
   Clock, Map as MapIcon,
-  Wifi, Snowflake, Tv, Car, Accessibility, 
-  GlassWater, Music, Sparkles, Utensils, Loader2
+  Wifi, Snowflake, Tv, Car, Accessibility,
+  GlassWater, Music, Sparkles, Utensils, Loader2, MessageCircle, Ticket,
+  X, ChevronLeft, ChevronRight, Maximize2
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter
+} from '@/components/ui/drawer';
 
 const AMENITY_ICONS: Record<string, any> = {
   wifi: { icon: <Wifi className="w-5 h-5 text-blue-600" />, label: "WiFi", info: "Conexión a internet incluida" },
@@ -32,69 +46,159 @@ const EventDetailPage = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteId, setFavoriteId] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [hasMembership, setHasMembership] = useState(false);
+  const [isReviewsDrawerOpen, setIsReviewsDrawerOpen] = useState(false);
   const [followers, setFollowers] = useState<any[]>([]);
+  const [organizerProfile, setOrganizerProfile] = useState<any>(null);
+  const [isOrganizerDrawerOpen, setIsOrganizerDrawerOpen] = useState(false);
+  const [hasTicket, setHasTicket] = useState(false);
+  const [chatRoomId, setChatRoomId] = useState<string | null>(null);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [ticketId, setTicketId] = useState<string | null>(null);
+  const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [eventImages, setEventImages] = useState<string[]>([]);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const fetchSecondaryData = async () => {
+    if (!id) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Check favorites
+        const { data: favData } = await supabase
+          .from('favorites')
+          .select('id')
+          .eq('event_id', id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (favData) {
+          setIsFavorite(true);
+          setFavoriteId(favData.id);
+        }
+
+        // Check following
+        const { data: followData } = await supabase
+          .from('event_followers')
+          .select('id')
+          .eq('event_id', id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        setIsFollowing(!!followData);
+
+        // Check if user has ticket
+        const { data: ticketData } = await supabase
+          .from('tickets')
+          .select('id')
+          .eq('event_id', id)
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+        
+        if (ticketData) {
+          setHasTicket(true);
+          setTicketId(ticketData.id);
+        } else {
+          setHasTicket(false);
+          setTicketId(null);
+        }
+
+        // Check for event chat room
+        const { data: roomData } = await supabase
+          .from('chat_rooms')
+          .select('id')
+          .eq('event_id', id)
+          .eq('type', 'event')
+          .maybeSingle();
+        
+        if (roomData) {
+          setChatRoomId(roomData.id);
+        }
+
+        // Check membership status
+        const { data: membership } = await supabase
+          .from('memberships')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .gt('expiration_date', new Date().toISOString())
+          .maybeSingle();
+        
+        setHasMembership(!!membership);
+      }
+
+      // Fetch some follower avatars
+      const { data: followersData } = await supabase
+        .from('event_followers')
+        .select('user_id, profiles!user_id(avatar_url)')
+        .eq('event_id', id)
+        .limit(5);
+      
+      if (followersData) {
+        setFollowers(followersData.map(f => (f as any).profiles?.avatar_url).filter(Boolean));
+      }
+
+      // Fetch reviews
+      const { data: reviewsData } = await supabase
+        .from('event_reviews')
+        .select('*, profiles!user_id(full_name, avatar_url)')
+        .eq('event_id', id)
+        .order('created_at', { ascending: false });
+      
+      if (reviewsData) {
+        setReviews(reviewsData);
+      }
+    } catch (e) {
+      console.error("Secondary data fetch failed:", e);
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
 
-    const fetchSecondaryData = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          // Check favorites
-          const { data: favData } = await supabase
-            .from('favorites')
-            .select('id')
-            .eq('event_id', id)
-            .eq('user_id', user.id)
-            .maybeSingle();
-          
-          if (favData) {
-            setIsFavorite(true);
-            setFavoriteId(favData.id);
-          }
-
-          // Check following
-          const { data: followData } = await supabase
-            .from('event_followers')
-            .select('id')
-            .eq('event_id', id)
-            .eq('user_id', user.id)
-            .maybeSingle();
-          
-          setIsFollowing(!!followData);
-        }
-
-        // Fetch some follower avatars
-        const { data: followersData } = await supabase
-          .from('event_followers')
-          .select(`
-            user_id,
-            profiles (
-              avatar_url
-            )
-          `)
-          .eq('event_id', id)
-          .limit(5);
-        
-        if (followersData) {
-          setFollowers(followersData.map(f => (f as any).profiles?.avatar_url).filter(Boolean));
-        }
-      } catch (e) {
-        console.error("Secondary data fetch failed:", e);
-      }
-    };
-
     const fetchEvent = async () => {
       try {
-        const { data, error } = await supabase
+        const { data: eventData, error: eventError } = await supabase
           .from('events')
           .select('*')
           .eq('id', id)
           .single();
 
-        if (error) throw error;
-        setEvent(data);
+        if (eventError) throw eventError;
+        setEvent(eventData);
+
+        // Fetch organizer profile separately
+        if (eventData.organizer_id) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', eventData.organizer_id)
+            .maybeSingle();
+
+          if (profileData) {
+            setOrganizerProfile(profileData);
+          }
+        }
+
+        // Fetch event images
+        const { data: imagesData } = await supabase
+          .from('event_images')
+          .select('image_url')
+          .eq('event_id', id);
+        
+        if (imagesData && imagesData.length > 0) {
+          const urls = imagesData.map(img => img.image_url);
+          // Combine main image with secondary images, avoiding duplicates
+          const allImages = Array.from(new Set([eventData.image_url, ...urls].filter(Boolean)));
+          setEventImages(allImages);
+        } else {
+          setEventImages(eventData.image_url ? [eventData.image_url] : []);
+        }
+
         fetchSecondaryData();
 
       } catch (error) {
@@ -134,9 +238,16 @@ const EventDetailPage = () => {
       )
       .subscribe();
 
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+
     return () => {
       supabase.removeChannel(eventSubscription);
       supabase.removeChannel(followersSubscription);
+      window.removeEventListener('scroll', handleScroll);
     };
   }, [id, navigate]);
 
@@ -153,7 +264,7 @@ const EventDetailPage = () => {
           .from('favorites')
           .delete()
           .eq('id', favoriteId);
-        
+
         if (error) throw error;
         setIsFavorite(false);
         setFavoriteId(null);
@@ -167,7 +278,7 @@ const EventDetailPage = () => {
           })
           .select()
           .single();
-        
+
         if (error) throw error;
         setIsFavorite(true);
         setFavoriteId(data.id);
@@ -193,7 +304,7 @@ const EventDetailPage = () => {
           .delete()
           .eq('event_id', id)
           .eq('user_id', user.id);
-        
+
         if (error) throw error;
         setIsFollowing(false);
         toast.success('Ya no sigues este evento');
@@ -204,11 +315,11 @@ const EventDetailPage = () => {
             user_id: user.id,
             event_id: id
           });
-        
+
         if (error) throw error;
         setIsFollowing(true);
         toast.success('¡Ahora sigues este evento!');
-        
+
         // Also add to event chat room if exists
         const { data: room } = await supabase
           .from('chat_rooms')
@@ -216,7 +327,7 @@ const EventDetailPage = () => {
           .eq('event_id', id)
           .eq('type', 'event')
           .maybeSingle();
-        
+
         if (room) {
           await supabase.from('chat_room_members').upsert({
             room_id: room.id,
@@ -224,7 +335,7 @@ const EventDetailPage = () => {
           }, { onConflict: 'room_id,user_id' });
         }
       }
-      
+
       // Refresh avatars
       const { data: followersData } = await supabase
         .from('event_followers')
@@ -236,7 +347,7 @@ const EventDetailPage = () => {
         `)
         .eq('event_id', id)
         .limit(5);
-      
+
       if (followersData) {
         setFollowers(followersData.map(f => (f as any).profiles?.avatar_url).filter(Boolean));
       }
@@ -246,55 +357,88 @@ const EventDetailPage = () => {
     }
   };
 
-  const handleAmenityClick = (idx: number, info: string) => {
-    setSelectedAmenity(idx);
-    toast.info(info, {
-      icon: <Info className="w-4 h-4 text-primary" />,
-      duration: 3000
-    });
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!event) return null;
-
-  // Process amenities
-  let eventAmenities = [];
-  if (Array.isArray(event.amenities)) {
-    eventAmenities = event.amenities.map((key: string) => AMENITY_ICONS[key]).filter(Boolean);
-  } else if (typeof event.amenities === 'string') {
-    try {
-      const parsed = JSON.parse(event.amenities);
-      if (Array.isArray(parsed)) {
-         eventAmenities = parsed.map((key: string) => AMENITY_ICONS[key]).filter(Boolean);
-      }
-    } catch(e) {}
-  }
-
-  const priceDisplay = event.price && event.price !== '0' && event.price !== 'Gratis' ? `$${event.price}` : 'Gratis';
-
-  const handleOrganizerChat = async () => {
+  const handleJoinEventChat = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error('Inicia sesión para chatear con el organizador');
-        return;
-      }
-
-      if (user.id === event.organizer_id) {
-        toast.error('No puedes chatear contigo mismo');
+        toast.error('Inicia sesión para entrar al chat');
         return;
       }
 
       setLoading(true);
 
-      // Step 1: Find all rooms where the current user is a member
+      // 1. Try to find existing room
+      const { data: existingRoom } = await supabase
+        .from('chat_rooms')
+        .select('id')
+        .eq('event_id', id)
+        .eq('type', 'event')
+        .maybeSingle();
+
+      let targetRoomId = existingRoom?.id;
+
+      // 2. If no room, create it
+      if (!targetRoomId) {
+        const { data: newRoom, error: createError } = await supabase
+          .from('chat_rooms')
+          .insert({
+            name: `${event.title} — Chat`,
+            event_id: id,
+            type: 'event',
+            participants_count: 0
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        targetRoomId = newRoom.id;
+      }
+
+      // 3. Ensure user is a member
+      await supabase
+        .from('chat_room_members')
+        .upsert({ 
+          room_id: targetRoomId, 
+          user_id: user.id 
+        }, { onConflict: 'room_id,user_id' });
+
+      // 4. Navigate
+      navigate(`/chat/${targetRoomId}`);
+    } catch (error: any) {
+      console.error("Join chat error:", error);
+      toast.error('No se pudo abrir el chat');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOrganizerChat = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Inicia sesión para contactar al organizador');
+        navigate('/auth');
+        return;
+      }
+
+      if (!hasMembership) {
+        toast.error('Necesitas una membresía activa para contactar organizadores', {
+          description: 'Activa tu membresía ahora para desbloquear el chat directo.',
+          action: {
+            label: 'Comprar',
+            onClick: () => handleBuyMembership()
+          }
+        });
+        return;
+      }
+
+      if (user.id === event.organizer_id) {
+        toast.error('No puedes iniciar un chat contigo mismo');
+        return;
+      }
+
+      setLoading(true);
+
       const { data: myMemberships, error: membersError } = await supabase
         .from('chat_room_members')
         .select('room_id')
@@ -306,8 +450,6 @@ const EventDetailPage = () => {
 
       if (myMemberships && myMemberships.length > 0) {
         const roomIds = myMemberships.map(m => m.room_id);
-        
-        // Step 2: Find which of those rooms are 'private' AND have the organizer as a member
         const { data: existingRoom, error: lookupError } = await supabase
           .from('chat_room_members')
           .select(`
@@ -322,14 +464,10 @@ const EventDetailPage = () => {
           .maybeSingle();
 
         if (lookupError) throw lookupError;
-        
-        if (existingRoom) {
-          targetRoomId = existingRoom.room_id;
-        }
+        if (existingRoom) targetRoomId = existingRoom.room_id;
       }
 
       if (!targetRoomId) {
-        // Step 3: Create a new private room
         const { data: newRoom, error: roomError } = await supabase
           .from('chat_rooms')
           .insert({
@@ -343,19 +481,12 @@ const EventDetailPage = () => {
         if (roomError) throw roomError;
         targetRoomId = newRoom.id;
 
-        // Step 4: Add both members
-        const { error: joinError } = await supabase
+        await supabase
           .from('chat_room_members')
           .insert([
             { room_id: targetRoomId, user_id: user.id },
             { room_id: targetRoomId, user_id: event.organizer_id }
           ]);
-
-        if (joinError) {
-          // Cleanup the room if we couldn't add members
-          await supabase.from('chat_rooms').delete().eq('id', targetRoomId);
-          throw joinError;
-        }
       }
 
       navigate(`/chat/${targetRoomId}`);
@@ -367,7 +498,15 @@ const EventDetailPage = () => {
     }
   };
 
-  const isFree = !event.price || event.price === 0 || event.price === '0' || event.price === 'Gratis';
+
+
+  const handleAmenityClick = (idx: number, info: string) => {
+    setSelectedAmenity(idx);
+    toast.info(info, {
+      icon: <Info className="w-4 h-4 text-primary" />,
+      duration: 3000
+    });
+  };
 
   const handleFreeTicket = async () => {
     try {
@@ -408,8 +547,40 @@ const EventDetailPage = () => {
 
       if (error) throw error;
 
+      // Ensure event chat room exists and user is a member
+      let targetRoomId;
+      const { data: chatRoom } = await supabase
+        .from('chat_rooms')
+        .select('id')
+        .eq('event_id', id)
+        .eq('type', 'event')
+        .maybeSingle();
+
+      if (chatRoom) {
+        targetRoomId = chatRoom.id;
+      } else {
+        const { data: newRoom } = await supabase
+          .from('chat_rooms')
+          .insert({
+            name: `${event.title} — Chat`,
+            event_id: id,
+            type: 'event',
+            participants_count: 0
+          })
+          .select()
+          .single();
+        if (newRoom) targetRoomId = newRoom.id;
+      }
+
+      if (targetRoomId) {
+        await supabase
+          .from('chat_room_members')
+          .upsert({ room_id: targetRoomId, user_id: user.id }, { onConflict: 'room_id,user_id' });
+      }
+
       toast.success('¡Entrada obtenida con éxito! 🎉');
-      navigate('/tickets');
+      setHasTicket(true);
+      fetchSecondaryData(); // Refresh state to show reviews form and change button action
     } catch (error: any) {
       console.error("Error getting free ticket:", error);
       toast.error(`Error: ${error.message || 'No se pudo obtener la entrada'}`);
@@ -418,44 +589,180 @@ const EventDetailPage = () => {
     }
   };
 
+  const handleBuyMembership = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const expiration = new Date();
+      expiration.setMonth(expiration.getMonth() + 1);
+
+      const { error } = await supabase
+        .from('memberships')
+        .insert({
+          user_id: user.id,
+          status: 'active',
+          expiration_date: expiration.toISOString()
+        });
+
+      if (error) throw error;
+
+      setHasMembership(true);
+      toast.success('¡Membresía activada con éxito!');
+    } catch (e) {
+      toast.error('Error al activar membresía');
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!hasTicket) {
+      toast.error('Solo los asistentes con entrada pueden dejar reseñas');
+      return;
+    }
+
+    if (!newReview.comment.trim()) {
+      toast.error('Escribe un comentario para tu reseña');
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Inicia sesión para dejar una reseña');
+        return;
+      }
+
+      setIsSubmittingReview(true);
+      const { error } = await supabase
+        .from('event_reviews')
+        .insert({
+          event_id: id,
+          user_id: user.id,
+          rating: newReview.rating,
+          comment: newReview.comment.trim()
+        });
+
+      if (error) throw error;
+
+      toast.success('¡Gracias por tu reseña!');
+      setNewReview({ rating: 5, comment: '' });
+
+      // Refresh reviews
+      const { data: reviewsData } = await supabase
+        .from('event_reviews')
+        .select(`
+          *,
+          profiles (full_name, avatar_url)
+        `)
+        .eq('event_id', id)
+        .order('created_at', { ascending: false });
+
+      if (reviewsData) setReviews(reviewsData);
+    } catch (error: any) {
+      console.error("Error submitting review:", error);
+      toast.error('Error al enviar la reseña');
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!event) return null;
+
+  const isFree = !event.price || event.price === 0 || event.price === '0' || event.price === 'Gratis';
+
+  // Process amenities
+  let eventAmenities = [];
+  if (Array.isArray(event.amenities)) {
+    eventAmenities = event.amenities.map((key: string) => AMENITY_ICONS[key]).filter(Boolean);
+  } else if (typeof event.amenities === 'string') {
+    try {
+      const parsed = JSON.parse(event.amenities);
+      if (Array.isArray(parsed)) {
+        eventAmenities = parsed.map((key: string) => AMENITY_ICONS[key]).filter(Boolean);
+      }
+    } catch (e) { }
+  }
+
   return (
     <div className="min-h-screen bg-white pb-24 animate-fade-in">
-      {/* Hero Image Section */}
-      <div className="relative h-[400px]">
-        <img src={event.image_url || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800'} alt={event.title} className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-        <div className="absolute top-12 left-6 right-6 flex justify-between items-center">
-          <button onClick={() => navigate(-1)} className="p-3 rounded-2xl bg-white/20 backdrop-blur-md border border-white/20 text-white hover:bg-white/30 transition-all">
-            <ArrowLeft className="w-5 h-5" />
+      {/* Sticky Top Navbar */}
+      <div className={`fixed top-0 left-0 right-0 z-50 px-6 py-4 flex justify-between items-center transition-all duration-300 pointer-events-none ${
+        isScrolled ? 'bg-white/90 backdrop-blur-xl border-b border-slate-100 shadow-sm py-3' : 'bg-transparent pt-10'
+      }`}>
+        <button 
+          onClick={() => navigate(-1)} 
+          className={`p-3 rounded-2xl transition-all pointer-events-auto shadow-lg border ${
+            isScrolled 
+              ? 'bg-slate-100 border-slate-200 text-slate-900 hover:bg-slate-200' 
+              : 'bg-white/20 border-white/20 text-white hover:bg-white/30 backdrop-blur-xl'
+          }`}
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div className="flex gap-3 pointer-events-auto">
+          <button 
+            className={`p-3 rounded-2xl transition-all shadow-lg border ${
+              isScrolled 
+                ? 'bg-slate-100 border-slate-200 text-slate-900 hover:bg-slate-200' 
+                : 'bg-white/20 border-white/20 text-white hover:bg-white/30 backdrop-blur-xl'
+            }`}
+            onClick={() => {
+              navigator.clipboard.writeText(window.location.href);
+              toast.success('¡Enlace copiado!');
+            }}
+          >
+            <Share2 className="w-5 h-5" />
           </button>
-          <div className="flex gap-3">
-            <button className="p-3 rounded-2xl bg-white/20 backdrop-blur-md border border-white/20 text-white hover:bg-white/30 transition-all" onClick={() => toast.success('¡Enlace copiado!')}>
-              <Share2 className="w-5 h-5" />
-            </button>
-            <button 
-              onClick={toggleFollow}
-              className={`flex items-center gap-2 px-4 py-3 rounded-2xl backdrop-blur-md border transition-all active:scale-95 ${
-                isFollowing 
-                  ? 'bg-emerald-500 border-emerald-500 text-white' 
-                  : 'bg-white/20 border-white/20 text-white hover:bg-white/30'
-              }`}
-            >
-              <Users className="w-5 h-5" />
-              <span className="text-xs font-black uppercase tracking-widest">{isFollowing ? 'Siguiendo' : 'Seguir'}</span>
-            </button>
-            <button 
-              onClick={toggleFavorite}
-              className={`p-3 rounded-2xl backdrop-blur-md border transition-all ${
-                isFavorite 
-                  ? 'bg-red-500 border-red-500 text-white' 
-                  : 'bg-white/20 border-white/20 text-white hover:bg-white/30 hover:text-red-500'
-              }`}
-            >
-              <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
-            </button>
-          </div>
+          <button 
+            onClick={toggleFollow}
+            className={`flex items-center gap-2 px-4 py-3 rounded-2xl border transition-all active:scale-95 shadow-lg ${
+              isScrolled
+                ? (isFollowing ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-slate-100 border-slate-200 text-slate-900 hover:bg-slate-200')
+                : (isFollowing ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white/20 border-white/20 text-white hover:bg-white/30 backdrop-blur-xl')
+            }`}
+          >
+            <Users className="w-5 h-5" />
+            <span className="text-xs font-black uppercase tracking-widest">{isFollowing ? 'Siguiendo' : 'Seguir'}</span>
+          </button>
+          <button 
+            onClick={toggleFavorite}
+            className={`p-3 rounded-2xl border transition-all shadow-lg ${
+              isScrolled
+                ? (isFavorite ? 'bg-red-500 border-red-500 text-white' : 'bg-slate-100 border-slate-200 text-slate-900 hover:bg-slate-200')
+                : (isFavorite ? 'bg-red-500 border-red-500 text-white' : 'bg-white/20 border-white/20 text-white hover:bg-white/30 backdrop-blur-xl')
+            }`}
+          >
+            <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
+          </button>
         </div>
-        <div className="absolute bottom-8 left-6 right-6">
+      </div>
+
+      {/* Hero Image Section */}
+      <div 
+        className="relative h-[400px] cursor-pointer group"
+        onClick={() => setIsGalleryOpen(true)}
+      >
+        <img 
+          src={event.image_url || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800'} 
+          alt={event.title} 
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+        
+        {/* Gallery Hint */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white/20 backdrop-blur-md p-4 rounded-full border border-white/20 opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 flex items-center justify-center">
+          <Maximize2 className="w-6 h-6 text-white" />
+        </div>
+
+        <div className="absolute bottom-12 left-6 right-6">
           <div className="flex gap-2 items-center mb-4">
             <Badge className="bg-primary text-white border-none px-4 py-1.5 font-black text-[10px] uppercase tracking-widest">{event.category}</Badge>
             {isFree && (
@@ -466,10 +773,82 @@ const EventDetailPage = () => {
           </div>
           <h1 className="text-3xl font-black text-white tracking-tight leading-tight">{event.title}</h1>
         </div>
+        
+        {/* Photo Count Indicator */}
+        {eventImages.length > 1 && (
+          <div className="absolute bottom-20 right-6 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
+            <Users className="w-3 h-3 text-white/70" />
+            <span className="text-[10px] font-black text-white uppercase tracking-widest">{eventImages.length} Fotos</span>
+          </div>
+        )}
       </div>
 
+      {/* Image Gallery Dialog */}
+      <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black/95 border-none h-[80vh] sm:h-auto flex flex-col justify-center">
+          <DialogTitle className="sr-only">Galería de Fotos</DialogTitle>
+          <div className="relative w-full aspect-video sm:aspect-[16/9] bg-black group/gallery">
+            <img 
+              src={eventImages[currentImageIndex]} 
+              alt={`Foto ${currentImageIndex + 1}`} 
+              className="w-full h-full object-contain"
+            />
+            
+            {/* Close Button */}
+            <button 
+              onClick={() => setIsGalleryOpen(false)}
+              className="absolute top-4 right-4 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/10 backdrop-blur-md transition-all z-50"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Navigation Controls */}
+            {eventImages.length > 1 && (
+              <>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentImageIndex(prev => (prev > 0 ? prev - 1 : eventImages.length - 1));
+                  }}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/10 backdrop-blur-md transition-all opacity-0 group-hover/gallery:opacity-100"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentImageIndex(prev => (prev < eventImages.length - 1 ? prev + 1 : 0));
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/10 backdrop-blur-md transition-all opacity-0 group-hover/gallery:opacity-100"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </>
+            )}
+
+            {/* Pagination / Thumbnails Indicator */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 px-4 py-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10">
+              {eventImages.map((_, idx) => (
+                <button 
+                  key={idx}
+                  onClick={() => setCurrentImageIndex(idx)}
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${idx === currentImageIndex ? 'bg-primary w-4' : 'bg-white/40'}`}
+                />
+              ))}
+            </div>
+            
+            {/* Index Display */}
+            <div className="absolute top-4 left-6 px-3 py-1.5 bg-black/40 backdrop-blur-md rounded-full border border-white/10">
+              <p className="text-[10px] font-black text-white/90 uppercase tracking-[0.2em]">
+                {currentImageIndex + 1} / {eventImages.length}
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="px-5 -mt-6 relative z-10 bg-white rounded-t-[40px] pt-8 space-y-8">
-        
+
         {/* Quick Info Grid */}
         <div className="flex flex-col gap-3">
           {/* Date & Time Row */}
@@ -481,7 +860,7 @@ const EventDetailPage = () => {
               </div>
               <p className="text-[13px] font-black text-slate-900 leading-tight">{event.event_date}</p>
             </div>
-            
+
             <div className="flex flex-col justify-center p-5 bg-white rounded-[28px] border border-slate-100 shadow-sm">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-500"><Clock className="w-4 h-4" /></div>
@@ -490,7 +869,7 @@ const EventDetailPage = () => {
               <p className="text-[13px] font-black text-slate-900 leading-tight">{event.event_time}</p>
             </div>
           </div>
-          
+
           {/* Location Full Width */}
           <div className="flex items-center justify-between p-5 bg-slate-900 rounded-[28px] text-white shadow-xl shadow-slate-900/10">
             <div className="flex items-center gap-4 min-w-0">
@@ -529,6 +908,8 @@ const EventDetailPage = () => {
           </div>
         </div>
 
+
+
         {/* Description */}
         <div className="px-1">
           <h2 className="text-lg font-black text-slate-900 tracking-tight mb-3">Sobre el evento</h2>
@@ -536,31 +917,108 @@ const EventDetailPage = () => {
         </div>
 
         {/* Organizer Section */}
-        <div className="flex items-center justify-between p-2 pl-4 pr-2 bg-slate-50 rounded-full border border-slate-100">
-          <div 
-            className="flex items-center gap-3 cursor-pointer group"
-            onClick={() => navigate(`/profile/u/${event.organizer_id}`)}
-          >
-            <div className="w-12 h-12 rounded-full overflow-hidden shadow-sm border-2 border-white group-hover:scale-110 transition-transform">
-               <img src={event.organizer_avatar || `https://i.pravatar.cc/150?u=${event.organizer_id}`} alt={event.organizer_name || 'Organizador'} className="w-full h-full object-cover" />
+        <div className="flex items-center justify-between p-6 bg-slate-50/50 rounded-[40px] border border-slate-100">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-white border border-slate-100 p-1">
+              <img src={organizerProfile?.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100'} alt="Organizer" className="w-full h-full object-cover rounded-xl" />
             </div>
             <div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Organizador</p>
-              <h4 className="text-sm font-black text-slate-900 group-hover:text-primary transition-colors">{event.organizer_name || 'Organizador Anónimo'}</h4>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Organizador</p>
+              <h3 className="text-sm font-black text-slate-900 leading-tight">{organizerProfile?.full_name || 'Organizador'}</h3>
             </div>
           </div>
-          <button 
-            onClick={() => isFollowing ? handleOrganizerChat() : toast.error('Sigue el evento para habilitar el chat')} 
-            className={`h-12 px-5 rounded-full font-black text-[11px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg ${
-              isFollowing 
-                ? 'bg-primary text-white shadow-primary/20 hover:bg-primary/90' 
-                : 'bg-slate-200 text-slate-400 shadow-none cursor-not-allowed grayscale'
-            }`}
-          >
-            {isFollowing ? <MessageSquare className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-            Chat
-          </button>
+          <div className="flex flex-col gap-2">
+            {!hasMembership && (
+              <p className="text-[9px] text-rose-500 font-black uppercase text-center">Activa membresía para chat</p>
+            )}
+            <Button
+              onClick={handleOrganizerChat}
+              className={`h-11 rounded-xl px-6 font-black uppercase tracking-widest text-[10px] transition-all flex items-center gap-2 ${hasMembership ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-200 text-slate-400'
+                }`}
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span>Contactar</span>
+            </Button>
+          </div>
         </div>
+
+        {/* Organizer Info Drawer */}
+        <Drawer open={isOrganizerDrawerOpen} onOpenChange={setIsOrganizerDrawerOpen}>
+          <DrawerContent className="max-h-[85vh] p-0 overflow-hidden rounded-t-[40px] border-none shadow-2xl">
+            <div className="p-8 pb-10 space-y-8 bg-white">
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-24 h-24 rounded-[32px] bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-4 border-white shadow-xl overflow-hidden relative group">
+                  <img
+                    src={event.organizer_avatar || organizerProfile?.avatar_url || `https://i.pravatar.cc/150?u=${event.organizer_id}`}
+                    alt={event.organizer_name || organizerProfile?.full_name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                  {organizerProfile?.role === 'premium' && (
+                    <div className="absolute -top-1 -right-1 bg-amber-400 p-1.5 rounded-full shadow-lg border-2 border-white">
+                      <Sparkles className="w-3 h-3 text-white fill-current" />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tight">{event.organizer_name || organizerProfile?.full_name || 'Organizador'}</h3>
+                  <div className="flex items-center justify-center gap-2 mt-1">
+                    <Badge variant="secondary" className="bg-slate-100 text-slate-500 border-none font-bold text-[10px] uppercase tracking-widest px-3 py-1">
+                      {organizerProfile?.role || 'Organizador'}
+                    </Badge>
+                    {organizerProfile?.location && (
+                      <span className="text-slate-400 text-[11px] font-bold flex items-center gap-1">
+                        <MapPin className="w-3 h-3" /> {organizerProfile.location}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-slate-50 rounded-3xl p-4 text-center border border-slate-100">
+                  <p className="text-xl font-black text-slate-900 leading-none mb-1">{organizerProfile?.followers_count || 0}</p>
+                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Seguidores</p>
+                </div>
+                <div className="bg-slate-50 rounded-3xl p-4 text-center border border-slate-100">
+                  <p className="text-xl font-black text-slate-900 leading-none mb-1">{organizerProfile?.events_count || 0}</p>
+                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Eventos</p>
+                </div>
+                <div className="bg-slate-50 rounded-3xl p-4 text-center border border-slate-100">
+                  <p className="text-xl font-black text-slate-900 leading-none mb-1">4.9</p>
+                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Rating</p>
+                </div>
+              </div>
+
+              {organizerProfile?.bio && (
+                <div className="bg-slate-50/50 rounded-3xl p-6 border border-slate-100/50">
+                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-2">Sobre mí</p>
+                  <p className="text-slate-600 text-[13px] leading-relaxed font-medium">
+                    {organizerProfile.bio}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => navigate(`/profile/u/${event.organizer_id}`)}
+                  className="flex-1 h-14 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-widest text-[11px] shadow-xl shadow-slate-900/10"
+                >
+                  <User className="w-4 h-4 mr-2" /> Ver Perfil Completo
+                </Button>
+                <Button
+                  onClick={() => {
+                    setIsOrganizerDrawerOpen(false);
+                    isFollowing ? handleOrganizerChat() : toast.error('Sigue el evento para chatear');
+                  }}
+                  variant="outline"
+                  className="h-14 w-14 rounded-2xl border-slate-200 flex items-center justify-center"
+                >
+                  <MessageSquare className="w-5 h-5 text-slate-600" />
+                </Button>
+              </div>
+            </div>
+          </DrawerContent>
+        </Drawer>
 
         {/* Amenities Section */}
         {eventAmenities.length > 0 && (
@@ -569,19 +1027,18 @@ const EventDetailPage = () => {
             <div className="flex flex-wrap gap-2.5">
               {eventAmenities.map((item: any, idx: number) => {
                 const textColorClass = item.icon.props.className?.split(' ').find((c: string) => c.startsWith('text-')) || '';
-                
+
                 return (
-                  <button 
-                    key={idx} 
+                  <button
+                    key={idx}
                     onClick={() => handleAmenityClick(idx, item.info)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all active:scale-95 ${
-                      selectedAmenity === idx 
-                        ? 'bg-slate-900 border-slate-900 text-white shadow-md' 
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all active:scale-95 ${selectedAmenity === idx
+                        ? 'bg-slate-900 border-slate-900 text-white shadow-md'
                         : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                    }`}
+                      }`}
                   >
                     <div className={`flex items-center justify-center ${selectedAmenity === idx ? 'text-white' : textColorClass}`}>
-                       {React.cloneElement(item.icon, { className: 'w-4 h-4' })}
+                      {React.cloneElement(item.icon, { className: 'w-4 h-4' })}
                     </div>
                     <span className={`text-[11px] font-black uppercase tracking-wider ${selectedAmenity === idx ? 'text-white' : 'text-slate-700'}`}>{item.label}</span>
                   </button>
@@ -591,29 +1048,182 @@ const EventDetailPage = () => {
           </div>
         )}
 
+        {/* Discrete Reviews Summary */}
+        <div 
+          onClick={() => setIsReviewsDrawerOpen(true)}
+          className="mx-1 p-5 bg-slate-50/50 rounded-[32px] border border-slate-100 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-all active:scale-[0.98]"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-amber-500 shadow-sm border border-slate-100">
+              <Star className="w-6 h-6 fill-current" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-sm font-black text-slate-900">
+                  {reviews.length > 0 
+                    ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) 
+                    : '0.0'}
+                </span>
+                <div className="flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star key={s} className={`w-3 h-3 ${s <= Math.round(reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length) ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
+                  ))}
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                {reviews.length} {reviews.length === 1 ? 'Reseña' : 'Reseñas'} de la comunidad
+              </p>
+            </div>
+          </div>
+          <ArrowLeft className="w-5 h-5 text-slate-300 rotate-180" />
+        </div>
+
+        {/* Reviews Drawer */}
+        <Drawer open={isReviewsDrawerOpen} onOpenChange={setIsReviewsDrawerOpen}>
+          <DrawerContent className="max-h-[90vh] rounded-t-[40px] border-none shadow-2xl">
+            <div className="p-8 pb-12 overflow-y-auto custom-scrollbar">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">Reseñas</h2>
+                  <p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest mt-1">Qué dicen los asistentes</p>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-3xl font-black text-slate-900">
+                    {reviews.length > 0 
+                      ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) 
+                      : '0.0'}
+                  </span>
+                  <div className="flex gap-0.5">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} className={`w-3 h-3 ${s <= Math.round(reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length) ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Add Review Form (Inside Drawer) */}
+              {hasTicket && (
+                <div className="mb-10 p-6 bg-slate-50 rounded-[32px] border border-slate-100 space-y-4">
+                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] text-center">Danos tu opinión</p>
+                  <div className="flex justify-center gap-3">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button key={star} onClick={() => setNewReview({ ...newReview, rating: star })} className="transition-transform active:scale-90">
+                        <Star className={`w-8 h-8 ${star <= newReview.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-300 hover:text-amber-200'}`} />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="relative">
+                    <textarea 
+                      placeholder="Comparte tu experiencia en este evento..." 
+                      className="w-full min-h-[100px] p-5 rounded-2xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 text-[13px] font-medium resize-none shadow-sm"
+                      value={newReview.comment}
+                      onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
+                    />
+                    <Button 
+                      onClick={handleSubmitReview}
+                      disabled={isSubmittingReview}
+                      className="absolute bottom-3 right-3 w-10 h-10 rounded-xl bg-slate-900 hover:bg-black text-white p-0 shadow-lg"
+                    >
+                      {isSubmittingReview ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Review List (Inside Drawer) */}
+              <div className="space-y-6">
+                {reviews.length > 0 ? (
+                  reviews.map((review) => (
+                    <div key={review.id} className="pb-6 border-b border-slate-50 last:border-0">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <img src={review.profiles?.avatar_url || 'https://i.pravatar.cc/100'} alt={review.profiles?.full_name} className="w-10 h-10 rounded-xl object-cover border border-slate-100" />
+                          <div>
+                            <h4 className="text-[13px] font-black text-slate-900 leading-tight">{review.profiles?.full_name || 'Usuario'}</h4>
+                            <div className="flex gap-0.5 mt-0.5">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star key={s} className={`w-2.5 h-2.5 ${s <= review.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-100'}`} />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-bold">
+                          {new Date(review.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-slate-600 text-[13px] leading-relaxed font-medium pl-1">
+                        {review.comment}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12">
+                    <MessageSquare className="w-12 h-12 text-slate-100 mx-auto mb-4" />
+                    <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">No hay reseñas todavía</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </DrawerContent>
+        </Drawer>
+
         {/* Floating Bottom Bar (Spacing buffer) */}
         <div className="h-4"></div>
 
         {/* Floating Bottom Bar */}
-        <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-xl border-t border-slate-100 flex items-center justify-between z-50">
+        <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/95 backdrop-blur-xl border-t border-slate-100 z-50 flex items-center justify-between gap-4">
           <div className="flex flex-col">
-            <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">
-              {isFree ? 'Acceso' : 'Precio Final'}
-            </span>
-            <span className="text-2xl font-black text-slate-900">
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none mb-1">Precio</p>
+            <p className="text-xl font-black text-slate-900 leading-none">
               {isFree ? 'Gratis' : `$${event.price}`}
-            </span>
+            </p>
           </div>
-          <Button 
-            onClick={() => isFree ? handleFreeTicket() : navigate(`/checkout/${id}`)} 
-            className={`rounded-[24px] px-10 h-14 font-black uppercase tracking-[0.15em] shadow-2xl transition-all ${
-              isFree 
-                ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20 text-white' 
-                : 'bg-slate-900 hover:bg-slate-800 shadow-slate-900/20 text-white'
-            }`}
-          >
-            {isFree ? 'Obtener Entrada' : 'Comprar Entrada'}
-          </Button>
+          
+          <div className="flex gap-2 flex-1 max-w-md">
+            {/* Chat Button */}
+            <Button
+              onClick={() => {
+                if (!hasTicket) {
+                  toast.error('Debes tener una entrada para entrar al chat');
+                  return;
+                }
+                handleJoinEventChat();
+              }}
+              className={`flex-1 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg transition-all flex flex-col items-center justify-center gap-1 ${hasTicket ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20' : 'bg-slate-50 text-slate-400 border border-slate-100 shadow-none'
+                }`}
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span className="text-[8px]">Chat</span>
+            </Button>
+
+            {/* View Tickets Button */}
+            <Button
+              onClick={() => {
+                if (hasTicket && ticketId) {
+                  navigate(`/ticket/${ticketId}`);
+                } else {
+                  navigate('/tickets');
+                }
+              }}
+              className={`flex-1 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] border transition-all flex flex-col items-center justify-center gap-1 ${
+                hasTicket ? 'bg-indigo-50 border-indigo-100 text-indigo-600' : 'bg-slate-50 border-slate-100 text-slate-400'
+              }`}
+            >
+              <Ticket className="w-5 h-5" />
+              <span className="text-[8px]">Mis Tickets</span>
+            </Button>
+
+            {/* Buy Button */}
+            <Button
+              onClick={() => isFree ? handleFreeTicket() : navigate(`/checkout/${id}`)}
+              className={`flex-[2] h-14 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-2xl transition-all ${isFree
+                  ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20 text-white'
+                  : 'bg-slate-900 hover:bg-slate-800 shadow-slate-900/20 text-white'
+                }`}
+            >
+              {isFree ? (hasTicket ? 'Adquirida' : 'Obtener') : 'Comprar'}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -621,3 +1231,4 @@ const EventDetailPage = () => {
 };
 
 export default EventDetailPage;
+
