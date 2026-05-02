@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { 
   ArrowLeft, Calendar, MapPin, Clock, Share2, 
   Download, MoreHorizontal, Info, ShieldCheck, 
@@ -13,6 +14,7 @@ import { Loader2 } from 'lucide-react';
 
 const TicketDetailsPage = () => {
   const navigate = useNavigate();
+  const goBack = useSmartBack('/tickets');
   const { id } = useParams();
 
   const [ticketData, setTicketData] = useState<any>(null);
@@ -61,7 +63,7 @@ const TicketDetailsPage = () => {
       {/* Header */}
       <div className="p-4 flex items-center justify-between sticky top-0 z-30 bg-background/80 backdrop-blur-xl">
         <button 
-          onClick={() => navigate(-1)} 
+          onClick={goBack} 
           className="p-2.5 rounded-2xl bg-card shadow-sm border border-border active:scale-90 transition-all flex items-center justify-center"
         >
           <ArrowLeft className="w-5 h-5 text-foreground" />

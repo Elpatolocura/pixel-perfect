@@ -62,12 +62,12 @@ const OnboardingPage = () => {
       if (error) throw error;
 
       toast.success(t('common.success'));
-      navigate('/');
+      navigate('/', { replace: true });
     } catch (err: any) {
       console.error('Error saving profile:', err);
       toast.error(t('common.error'));
       // Fallback navigation
-      setTimeout(() => navigate('/'), 1500);
+      setTimeout(() => navigate('/', { replace: true }), 1500);
     } finally {
       setLoading(false);
     }

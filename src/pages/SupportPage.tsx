@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { 
   ArrowLeft, MessageCircle, Mail, Phone, ExternalLink, 
   Search, ChevronRight, HelpCircle, AlertCircle, ShieldCheck, 
@@ -56,6 +57,7 @@ const FAQItem = ({ title, description }: { title: string, description: string })
 
 const SupportPage = () => {
   const navigate = useNavigate();
+  const goBack = useSmartBack('/settings');
   const [activeBenefit, setActiveBenefit] = useState(0);
 
   const faqs = [
@@ -100,7 +102,7 @@ const SupportPage = () => {
         <div className="max-w-xl mx-auto">
           <div className="flex items-center gap-4 mb-6">
             <button 
-              onClick={() => navigate(-1)} 
+              onClick={goBack} 
               className="p-2.5 rounded-2xl bg-card shadow-sm border border-border flex items-center justify-center hover:bg-secondary active:scale-90 transition-all"
             >
               <ArrowLeft className="w-5 h-5 text-foreground" />

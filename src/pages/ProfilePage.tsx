@@ -1,6 +1,7 @@
 import { mockTickets, mockEvents, mockNotifications, categoryEmojis } from '@/data/mockData';
 import { Settings, Ticket, Heart, CalendarDays, ChevronRight, Crown, LogOut, User, Bell, ChevronLeft, UserPlus, UserCheck, Menu, MapPin, Share } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ const ProfilePage = () => {
   const { t, i18n } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const goBack = useSmartBack('/');
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -87,10 +89,9 @@ const ProfilePage = () => {
           .from('subscriptions')
           .select('*')
           .eq('user_id', targetId)
-          .eq('status', 'active')
-          .maybeSingle();
+          .eq('status', 'active');
         
-        setIsPremium(!!subData);
+        setIsPremium(subData && subData.length > 0);
 
         // Stats counts
         const { count: tickets } = await supabase.from('tickets').select('*', { count: 'exact', head: true }).eq('user_id', targetId);
@@ -230,7 +231,7 @@ const ProfilePage = () => {
       {/* Header */}
       <div className="flex justify-between items-center px-6 pt-12 pb-4 relative z-10">
         <button 
-          onClick={() => navigate(-1)} 
+          onClick={goBack} 
           className="p-2 -ml-2 text-foreground hover:bg-black/5 rounded-full transition-colors active:scale-95"
         >
           <ChevronLeft className="w-6 h-6" />
@@ -342,22 +343,13 @@ const ProfilePage = () => {
         {/* Action Buttons */}
         <div className="w-full flex gap-3 mb-8">
           {isOwnProfile ? (
-            !isPremium ? (
+            !isPremium && (
               <Button 
                 onClick={() => navigate('/premium')} 
                 className="w-full h-12 rounded-full font-bold bg-gradient-to-r from-amber-400 to-amber-600 text-white shadow-lg shadow-amber-500/20 active:scale-[0.98] transition-all text-[14px]"
               >
                 <Crown className="w-4 h-4 mr-2" />
                 {t('profile.membership.upgrade')}
-              </Button>
-            ) : (
-              <Button 
-                onClick={() => navigate('/settings')} 
-                variant="outline"
-                className="w-full h-12 rounded-full font-bold border-amber-500/20 text-amber-600 bg-amber-500/5 hover:bg-amber-500/10 active:scale-[0.98] transition-all text-[14px]"
-              >
-                <Crown className="w-4 h-4 mr-2" />
-                {t('profile.membership.manage')}
               </Button>
             )
           ) : (

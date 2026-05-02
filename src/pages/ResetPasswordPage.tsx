@@ -49,7 +49,7 @@ const ResetPasswordPage = () => {
       toast.error(error.message);
     } else {
       toast.success('¡Contraseña actualizada correctamente!');
-      navigate('/auth');
+      navigate('/auth', { replace: true });
     }
     setLoading(false);
   };

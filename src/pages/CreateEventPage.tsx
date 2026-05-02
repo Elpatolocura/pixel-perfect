@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Camera, Image as ImageIcon, Wifi, Car, Coffee, Music, Snowflake, Tv, Accessibility, Wine, Rocket, Lock, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { allCategories, categoryEmojis } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
@@ -19,6 +20,7 @@ const AVAILABLE_AMENITIES = [
 
 const CreateEventPage = () => {
   const navigate = useNavigate();
+  const goBack = useSmartBack('/');
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -46,17 +48,17 @@ const CreateEventPage = () => {
         }
 
         // Fetch active subscription for the user
-        const { data: sub, error } = await supabase
+        const { data: subs, error } = await supabase
           .from('subscriptions')
           .select('plan_id, status')
           .eq('user_id', user.id)
-          .eq('status', 'active')
-          .maybeSingle();
+          .eq('status', 'active');
 
         if (error) throw error;
 
         // Allow only Acceso Total plan
-        setIsAllAccess(sub?.plan_id === 'Acceso Total');
+        const hasAccess = subs && subs.some(s => s.plan_id === 'Acceso Total');
+        setIsAllAccess(hasAccess);
       } catch (error) {
         console.error("Error checking subscription:", error);
         setIsAllAccess(false);
@@ -236,7 +238,7 @@ const CreateEventPage = () => {
           </Button>
           <Button 
             variant="ghost"
-            onClick={() => navigate(-1)}
+            onClick={() => goBack()}
             className="w-full h-12 rounded-2xl text-muted-foreground font-bold hover:bg-secondary"
           >
             Volver
@@ -251,7 +253,7 @@ const CreateEventPage = () => {
   return (
     <div className="pb-24 px-5 pt-safe">
       <div className="pt-6 mb-6 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-xl bg-card border border-border flex items-center justify-center">
+        <button onClick={goBack} className="w-10 h-10 rounded-xl bg-card border border-border flex items-center justify-center">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="text-xl font-bold text-foreground">Crear evento</h1>

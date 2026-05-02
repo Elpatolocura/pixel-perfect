@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,7 @@ const ForgotPasswordPage = () => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const navigate = useNavigate();
+  const goBack = useSmartBack('/auth');
 
   const handleResetRequest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +34,7 @@ const ForgotPasswordPage = () => {
   return (
     <div className="min-h-screen bg-background p-4 flex flex-col items-center justify-center animate-fade-in pb-24">
       <button 
-        onClick={() => navigate(-1)} 
+        onClick={goBack} 
         className="absolute top-6 left-4 p-2 rounded-full bg-secondary/50 hover:bg-secondary transition-colors"
       >
         <ArrowLeft className="w-5 h-5" />

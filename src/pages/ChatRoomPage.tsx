@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { 
   ArrowLeft, Send, MoreVertical, Paperclip, 
   Smile, Heart, User, MapPin, Calendar, 
@@ -257,6 +258,7 @@ const ChatRoomPage = () => {
   const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
+  const goBack = useSmartBack('/chat');
   const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState<{url: string, type: string}[]>([]);
   const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -633,7 +635,7 @@ const ChatRoomPage = () => {
     return (
       <div className="h-screen bg-background flex flex-col">
         <header className="px-6 py-5 bg-background border-b border-border flex items-center gap-4 shadow-sm shrink-0">
-          <button onClick={() => navigate(-1)} className="p-2.5 rounded-2xl hover:bg-secondary transition-all">
+          <button onClick={goBack} className="p-2.5 rounded-2xl hover:bg-secondary transition-all">
             <ArrowLeft className="w-5 h-5 text-foreground" />
           </button>
           <h1 className="text-[15px] font-black text-foreground">{t('chat_room.event_chat')}</h1>
@@ -661,7 +663,7 @@ const ChatRoomPage = () => {
             </Button>
             <Button
               variant="outline"
-              onClick={() => navigate(-1)}
+              onClick={goBack}
               className="w-full h-12 rounded-2xl border-border font-bold text-foreground text-[12px] bg-background hover:bg-secondary"
             >
               {t('common.back')}
@@ -679,7 +681,7 @@ const ChatRoomPage = () => {
       {/* Chat Header */}
       <header className="px-6 py-5 bg-background border-b border-border flex items-center justify-between shadow-sm z-20 shrink-0">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="p-2.5 rounded-2xl hover:bg-secondary transition-all active:scale-90">
+          <button onClick={goBack} className="p-2.5 rounded-2xl hover:bg-secondary transition-all active:scale-90">
             <ArrowLeft className="w-5 h-5 text-foreground" />
           </button>
           <div className="flex items-center gap-3">

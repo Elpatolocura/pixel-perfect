@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, Plus, Users, Calendar, MoreVertical, Edit2, Trash2, ExternalLink, Rocket, Lock, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import {
 
 const MyEventsPage = () => {
   const navigate = useNavigate();
+  const goBack = useSmartBack('/profile');
   const [myEvents, setMyEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAllAccess, setIsAllAccess] = useState(false);
@@ -70,7 +72,7 @@ const MyEventsPage = () => {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border p-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-secondary transition-colors">
+          <button onClick={goBack} className="p-2 rounded-full hover:bg-secondary transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h1 className="text-xl font-bold">Mis Eventos</h1>

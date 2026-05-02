@@ -8,8 +8,8 @@ import { useLocation } from '@/hooks/useLocation';
 
 const ExplorePage = () => {
   const { t } = useTranslation();
-  const [query, setQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string>('todos');
+  const [query, setQuery] = useState(() => sessionStorage.getItem('explore_query') || '');
+  const [activeCategory, setActiveCategory] = useState<string>(() => sessionStorage.getItem('explore_category') || 'todos');
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { latitude, longitude, calculateDistance } = useLocation();
@@ -31,6 +31,39 @@ const ExplorePage = () => {
       }
     };
     fetchEvents();
+  }, []);
+
+  // Save state
+  useEffect(() => {
+    sessionStorage.setItem('explore_query', query);
+  }, [query]);
+
+  useEffect(() => {
+    sessionStorage.setItem('explore_category', activeCategory);
+  }, [activeCategory]);
+
+  // Restore scroll
+  useEffect(() => {
+    const savedScroll = sessionStorage.getItem('explore_scroll');
+    if (savedScroll && !loading && events.length > 0) {
+      setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 100);
+    }
+  }, [loading, events]);
+
+  // Save scroll on change
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    const handleScroll = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        sessionStorage.setItem('explore_scroll', window.scrollY.toString());
+      }, 100);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(timeout);
+    };
   }, []);
 
   let filtered = events.filter((e) => {

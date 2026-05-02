@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, Camera, User, Mail, Phone, MapPin, Save, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
+  const goBack = useSmartBack('/profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
@@ -135,9 +137,7 @@ const EditProfilePage = () => {
       window.dispatchEvent(new Event('profile-updated'));
 
       toast.success('Perfil actualizado correctamente');
-      
-      // Force a small delay before navigating to allow DB to propagate (optional but helpful)
-      setTimeout(() => navigate(-1), 500);
+      setTimeout(() => goBack(), 500);
     } catch (error: any) {
       console.error('Save error:', error);
       toast.error('Error al actualizar el perfil: ' + error.message);
@@ -159,7 +159,7 @@ const EditProfilePage = () => {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border p-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-secondary transition-colors">
+          <button onClick={goBack} className="p-2 rounded-full hover:bg-secondary transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h1 className="text-xl font-bold">Información Personal</h1>

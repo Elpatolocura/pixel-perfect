@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { supabase } from '@/lib/supabase';
 import { ChevronLeft, UserPlus, UserCheck, Search, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ interface Profile {
 const FollowsPage = () => {
   const { type } = useParams<{ type: 'followers' | 'following' }>();
   const navigate = useNavigate();
+  const goBack = useSmartBack('/profile');
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const uid = queryParams.get('uid');
@@ -156,7 +158,7 @@ const FollowsPage = () => {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 py-4 flex items-center gap-4">
         <button 
-          onClick={() => navigate(-1)}
+          onClick={goBack}
           className="p-2 hover:bg-secondary rounded-full transition-colors"
         >
           <ChevronLeft className="w-6 h-6" />

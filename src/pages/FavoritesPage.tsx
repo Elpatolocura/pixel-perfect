@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, Heart, Calendar, MapPin, Star, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/lib/supabase';
@@ -7,6 +8,7 @@ import { toast } from 'sonner';
 
 const FavoritesPage = () => {
   const navigate = useNavigate();
+  const goBack = useSmartBack('/');
   const [favorites, setFavorites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -75,7 +77,7 @@ const FavoritesPage = () => {
     <div className="min-h-screen bg-background pb-24 animate-fade-in">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border p-4 flex items-center gap-4">
-        <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-secondary transition-colors">
+        <button onClick={goBack} className="p-2 rounded-full hover:bg-secondary transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="text-xl font-bold">Favoritos</h1>

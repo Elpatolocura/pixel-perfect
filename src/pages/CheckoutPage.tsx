@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { 
   ArrowLeft, Ticket, CreditCard, ShieldCheck, 
   ChevronRight, Minus, Plus, Wallet, Lock,
@@ -14,6 +15,7 @@ import { supabase } from '@/lib/supabase';
 const CheckoutPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const goBack = useSmartBack(id ? `/event/${id}` : '/');
   const { t } = useTranslation();
   const [ticketCount, setTicketCount] = useState(1);
   const [selectedZone, setSelectedZone] = useState('General');
@@ -95,7 +97,7 @@ const CheckoutPage = () => {
     <div className="min-h-screen bg-background pb-32 animate-fade-in">
       {/* Header */}
       <div className="px-6 pt-12 pb-6 flex items-center gap-4 bg-background border-b border-border">
-        <button onClick={() => navigate(-1)} className="p-2 rounded-xl bg-secondary text-foreground hover:bg-secondary/80 transition-all flex items-center justify-center">
+        <button onClick={goBack} className="p-2 rounded-xl bg-secondary text-foreground hover:bg-secondary/80 transition-all flex items-center justify-center">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="text-xl font-black text-foreground tracking-tight">{t('checkout.title')}</h1>

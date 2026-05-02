@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, Bell, MessageSquare, Ticket, Star, Info, Sparkles, MoreVertical, CheckCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
@@ -14,6 +15,7 @@ import { Loader2 } from 'lucide-react';
 
 const NotificationsPage = () => {
   const navigate = useNavigate();
+  const goBack = useSmartBack('/');
   const [notifications, setNotifications] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
 
@@ -100,7 +102,7 @@ const NotificationsPage = () => {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border p-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-secondary transition-colors">
+          <button onClick={goBack} className="p-2 rounded-full hover:bg-secondary transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h1 className="text-xl font-bold">Notificaciones</h1>

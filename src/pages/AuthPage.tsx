@@ -43,7 +43,7 @@ const AuthPage = () => {
           }
         } else if (signUpData.user) {
           toast.success(t('auth.signup.success_auto'));
-          navigate('/onboarding');
+          navigate('/onboarding', { replace: true });
         }
       } else {
         toast.error(error.message);
@@ -59,13 +59,13 @@ const AuthPage = () => {
 
         if (!profile?.preferences || profile.preferences.length === 0) {
           toast.info(t('onboarding.complete_info'));
-          navigate('/onboarding');
+          navigate('/onboarding', { replace: true });
         } else {
           toast.success(t('auth.login.welcome_back'));
-          navigate('/');
+          navigate('/', { replace: true });
         }
       } else {
-        navigate('/');
+        navigate('/', { replace: true });
       }
     }
     setLoading(false);
@@ -101,7 +101,7 @@ const AuthPage = () => {
       }
       
       toast.success(t('auth.signup.success_onboarding'));
-      navigate('/onboarding');
+      navigate('/onboarding', { replace: true });
     }
     setLoading(false);
   };

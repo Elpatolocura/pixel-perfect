@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, Crown, Rocket, Check, CreditCard, ShieldCheck, Lock, Sparkles, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -9,8 +10,10 @@ import { supabase } from '@/lib/supabase';
 const SubscriptionCheckoutPage = () => {
   const { planId } = useParams();
   const navigate = useNavigate();
+  const goBack = useSmartBack('/premium');
   const { t } = useTranslation();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const plans: Record<string, any> = {
     'all_access': {
@@ -55,16 +58,10 @@ const SubscriptionCheckoutPage = () => {
       if (error) throw error;
 
       localStorage.setItem('user_membership', plan.name);
-      toast.success(`¡Felicidades! Ahora eres miembro ${plan.name}.`);
       
-      // Si el plan es Acceso Total, ir a crear evento, si no al inicio
-      setTimeout(() => {
-        if (plan.name === 'Acceso Total') {
-          navigate('/create-event');
-        } else {
-          navigate('/');
-        }
-      }, 2000);
+      // Show success screen instead of redirecting
+      setIsSuccess(true);
+      
     } catch (error) {
       console.error("Error subscribing:", error);
       toast.error(t('checkout.error'));
@@ -73,11 +70,50 @@ const SubscriptionCheckoutPage = () => {
     }
   };
 
+  if (isSuccess) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 animate-fade-in text-center space-y-8">
+        <div className="w-24 h-24 bg-emerald-500/20 rounded-full flex items-center justify-center animate-bounce shadow-[0_0_40px_rgba(16,185,129,0.3)]">
+          <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center text-white">
+            <Check className="w-8 h-8" />
+          </div>
+        </div>
+        
+        <div className="space-y-3">
+          <h1 className="text-3xl font-black text-foreground">¡Felicidades!</h1>
+          <p className="text-muted-foreground font-medium text-lg">
+            Ahora eres miembro <span className="text-primary font-bold">{plan.name}</span>.
+          </p>
+          <p className="text-sm text-muted-foreground/80 max-w-xs mx-auto">
+            Disfruta de la creación ilimitada de eventos, estadísticas avanzadas y todas las ventajas premium.
+          </p>
+        </div>
+
+        <div className="w-full max-w-xs pt-8 space-y-4">
+          <Button 
+            onClick={() => navigate(plan.name === 'Acceso Total' ? '/create' : '/', { replace: true })} 
+            className={`w-full h-14 rounded-2xl font-black text-white bg-gradient-to-r ${plan.gradient} shadow-xl hover:opacity-90`}
+          >
+            {plan.name === 'Acceso Total' ? 'Crear mi primer evento' : 'Volver al Inicio'}
+            <Rocket className="w-5 h-5 ml-2" />
+          </Button>
+          <Button 
+            variant="ghost"
+            onClick={() => navigate('/settings', { replace: true })} 
+            className="w-full h-14 rounded-2xl font-bold text-muted-foreground hover:text-foreground"
+          >
+            Ver mis beneficios
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background pb-32 animate-fade-in font-sans">
       {/* Header */}
       <div className="px-6 pt-12 pb-6 flex items-center justify-between bg-background border-b border-border">
-        <button onClick={() => navigate(-1)} className="p-2 rounded-xl bg-secondary text-foreground hover:bg-secondary/80 transition-all flex items-center justify-center">
+        <button onClick={goBack} className="p-2 rounded-xl bg-secondary text-foreground hover:bg-secondary/80 transition-all flex items-center justify-center">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="text-xl font-black text-foreground tracking-tight">{t('subscription.title')}</h1>

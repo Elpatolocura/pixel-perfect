@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, User, Bell, Lock, Globe, Moon, ShieldCheck, HelpCircle, LogOut, ChevronRight, Briefcase, Heart, Check, X, Sparkles, Palette, Crown, Rocket, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -12,6 +13,7 @@ import { allCategories, categoryEmojis } from '@/data/mockData';
 
 const SettingsPage = () => {
   const navigate = useNavigate();
+  const goBack = useSmartBack('/profile');
   const { t, i18n } = useTranslation();
   const [showInterests, setShowInterests] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);
@@ -207,7 +209,7 @@ const SettingsPage = () => {
     <div className="min-h-screen bg-background pb-24 animate-fade-in relative">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border p-4 flex items-center gap-4">
-        <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-secondary transition-colors">
+        <button onClick={goBack} className="p-2 rounded-full hover:bg-secondary transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="text-xl font-bold">{t('settings.title')}</h1>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { 
   ArrowLeft, Check, Crown, Zap, Shield, Star, Rocket, 
   Map, MessageCircle, Heart, Bell, PlusCircle, Globe,
@@ -12,6 +13,7 @@ import { toast } from 'sonner';
 
 const PremiumPage = () => {
   const navigate = useNavigate();
+  const goBack = useSmartBack('/');
   const { t } = useTranslation();
   const [selectedPlan, setSelectedPlan] = React.useState<string>('all_access');
 
@@ -77,7 +79,7 @@ const PremiumPage = () => {
       <div className="sticky top-0 z-50 bg-black/40 backdrop-blur-xl border-b border-white/5 p-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button 
-            onClick={() => navigate(-1)} 
+            onClick={goBack} 
             className="p-2.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all active:scale-90"
           >
             <ArrowLeft className="w-5 h-5 text-zinc-400" />

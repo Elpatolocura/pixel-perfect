@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import {
   ArrowLeft, Calendar, MapPin, Users, User, Share2,
   Heart, MessageSquare, Info, Lock, Star, Send,
@@ -42,6 +43,7 @@ const EventDetailPage = () => {
   const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
+  const goBack = useSmartBack('/');
   const [selectedAmenity, setSelectedAmenity] = useState<number | null>(null);
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -679,7 +681,7 @@ const EventDetailPage = () => {
         isScrolled ? 'bg-background/90 backdrop-blur-xl border-b border-border shadow-sm py-3' : 'bg-transparent pt-10'
       }`}>
         <button 
-          onClick={() => navigate(-1)} 
+          onClick={goBack} 
           className={`p-3 rounded-2xl transition-all pointer-events-auto shadow-lg border ${
             isScrolled 
               ? 'bg-secondary border-border text-foreground hover:bg-secondary/80' 

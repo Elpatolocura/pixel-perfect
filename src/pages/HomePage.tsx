@@ -18,9 +18,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 const HomePage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [priceFilter, setPriceFilter] = useState<'all' | 'free' | 'paid'>('all');
+  const [selectedCategory, setSelectedCategory] = useState(() => sessionStorage.getItem('home_category') || 'all');
+  const [searchQuery, setSearchQuery] = useState(() => sessionStorage.getItem('home_query') || '');
+  const [priceFilter, setPriceFilter] = useState<'all' | 'free' | 'paid'>(() => (sessionStorage.getItem('home_price') as 'all' | 'free' | 'paid') || 'all');
   const [events, setEvents] = useState<any[]>([]);
   const [userFavorites, setUserFavorites] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -134,6 +134,43 @@ const HomePage = () => {
       supabase.removeChannel(eventsSubscription);
     };
   }, [navigate]);
+
+  // Save states
+  useEffect(() => {
+    sessionStorage.setItem('home_category', selectedCategory);
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    sessionStorage.setItem('home_query', searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    sessionStorage.setItem('home_price', priceFilter);
+  }, [priceFilter]);
+
+  // Restore scroll
+  useEffect(() => {
+    const savedScroll = sessionStorage.getItem('home_scroll');
+    if (savedScroll && !loading && events.length > 0) {
+      setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 100);
+    }
+  }, [loading, events]);
+
+  // Save scroll on change
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    const handleScroll = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        sessionStorage.setItem('home_scroll', window.scrollY.toString());
+      }, 100);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(timeout);
+    };
+  }, []);
 
   const filteredEvents = useMemo(() => {
     let result = events.map(event => {
