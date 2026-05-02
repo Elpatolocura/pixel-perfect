@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { EventData } from '@/types';
-import { Heart } from 'lucide-react';
+import { Heart, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '@/lib/supabase';
 
 interface EventCardProps {
@@ -13,6 +14,7 @@ interface EventCardProps {
 
 const EventCard = ({ event, variant = 'large', isFavorite: isFavProp, onFavoriteToggle }: EventCardProps) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [followerAvatars, setFollowerAvatars] = useState<string[]>([]);
   const [liveEvent, setLiveEvent] = useState(event);
@@ -92,6 +94,12 @@ const EventCard = ({ event, variant = 'large', isFavorite: isFavProp, onFavorite
         <p className="text-muted-foreground text-[10px] mt-1">
           {event.event_date || event.date}
         </p>
+        {event.distance_km !== undefined && event.distance_km < 999999 && (
+          <div className="flex items-center gap-1 mt-1 text-primary">
+            <MapPin className="w-3 h-3" />
+            <span className="text-[10px] font-medium">{event.distance_km < 1 ? '< 1' : Math.round(event.distance_km)} km</span>
+          </div>
+        )}
       </button>
     );
   }
@@ -109,10 +117,16 @@ const EventCard = ({ event, variant = 'large', isFavorite: isFavProp, onFavorite
             {event.emoji || '📅'}
           </div>
         )}
-        <div className="absolute top-4 left-4">
-          <div className="bg-white/90 backdrop-blur-sm text-slate-900 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider shadow-sm">
+        <div className="absolute top-4 left-4 flex flex-col gap-2">
+          <div className="bg-background/90 backdrop-blur-sm text-foreground px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider shadow-sm w-fit">
             {event.category}
           </div>
+          {event.distance_km !== undefined && event.distance_km < 999999 && (
+            <div className="bg-primary/90 backdrop-blur-sm text-white px-2.5 py-1 rounded-full font-bold text-[10px] flex items-center gap-1 w-fit shadow-sm">
+              <MapPin className="w-3 h-3" />
+              {event.distance_km < 1 ? '< 1' : Math.round(event.distance_km)} km
+            </div>
+          )}
         </div>
         <div className="absolute top-3 right-3">
           <button 
@@ -123,7 +137,7 @@ const EventCard = ({ event, variant = 'large', isFavorite: isFavProp, onFavorite
             className={`w-10 h-10 rounded-xl backdrop-blur-md flex items-center justify-center transition-all border ${
               isFavProp 
                 ? 'bg-red-500 border-red-500 text-white' 
-                : 'bg-white/20 border-white/20 text-white hover:bg-white hover:text-red-500'
+                : 'bg-white/10 border-white/10 text-white hover:bg-white hover:text-red-500'
             }`}
           >
             <Heart
@@ -136,12 +150,20 @@ const EventCard = ({ event, variant = 'large', isFavorite: isFavProp, onFavorite
         <div className="flex justify-between items-start">
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-foreground text-base leading-tight truncate">{event.title}</h3>
-            <p className="text-muted-foreground text-sm mt-1">
-              {event.event_date || event.date} · {event.event_time || event.time}
+            <p className="text-muted-foreground text-sm mt-1 flex items-center gap-1.5">
+              <span>{event.event_date || event.date}</span>
+              <span>·</span>
+              <span>{event.event_time || event.time}</span>
+              {event.location && (
+                <>
+                  <span>·</span>
+                  <span className="truncate max-w-[100px]">{event.location.split(',')[0]}</span>
+                </>
+              )}
             </p>
           </div>
           <div className="bg-accent/10 text-accent px-2.5 py-1 rounded-lg text-xs font-semibold shrink-0 ml-2">
-            {!event.price || Number(event.price) === 0 ? 'Gratis' : `$${event.price}`}
+            {!event.price || Number(event.price) === 0 ? t('common.free') : `$${event.price}`}
 
           </div>
         </div>
@@ -160,10 +182,10 @@ const EventCard = ({ event, variant = 'large', isFavorite: isFavProp, onFavorite
                 ))
               )}
             </div>
-            <span className="text-xs text-muted-foreground ml-1.5">+{event.attendees || event.attendees_count || 0} asistirán</span>
+            <span className="text-xs text-muted-foreground ml-1.5">+{event.attendees || event.attendees_count || 0} {t('event_detail.attendees')}</span>
           </div>
           <span className="text-xs font-semibold text-foreground bg-secondary px-3 py-1.5 rounded-lg">
-            Ver más
+            {t('common.view_more')}
           </span>
         </div>
       </div>

@@ -33,7 +33,7 @@ const CreateEventPage = () => {
     amenities: [] as string[],
   });
 
-  const [isBusiness, setIsBusiness] = useState<boolean | null>(null);
+  const [isAllAccess, setIsAllAccess] = useState<boolean | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
@@ -55,11 +55,11 @@ const CreateEventPage = () => {
 
         if (error) throw error;
 
-        // Allow only Business plan
-        setIsBusiness(sub?.plan_id === 'Business');
+        // Allow only Acceso Total plan
+        setIsAllAccess(sub?.plan_id === 'Acceso Total');
       } catch (error) {
         console.error("Error checking subscription:", error);
-        setIsBusiness(false);
+        setIsAllAccess(false);
       } finally {
         setCheckingAuth(false);
       }
@@ -206,38 +206,38 @@ const CreateEventPage = () => {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
-        <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mb-4" />
-        <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Verificando membresía...</p>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+        <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground font-bold uppercase tracking-widest text-[10px]">Verificando membresía...</p>
       </div>
     );
   }
 
-  if (isBusiness === false) {
+  if (isAllAccess === false) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center animate-fade-in">
-        <div className="w-24 h-24 bg-indigo-100 rounded-[32px] flex items-center justify-center mb-6 shadow-xl shadow-indigo-500/20 relative">
-          <Rocket className="w-12 h-12 text-indigo-600" />
-          <div className="absolute -top-2 -right-2 bg-slate-900 text-white rounded-full p-2 shadow-lg animate-bounce">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+        <div className="w-24 h-24 bg-primary/10 rounded-[32px] flex items-center justify-center mb-6 shadow-xl shadow-primary/20 relative">
+          <Rocket className="w-12 h-12 text-primary" />
+          <div className="absolute -top-2 -right-2 bg-foreground text-background rounded-full p-2 shadow-lg animate-bounce">
             <Lock className="w-4 h-4" />
           </div>
         </div>
-        <h1 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Acceso Restringido</h1>
-        <p className="text-slate-500 text-[15px] font-medium leading-relaxed max-w-xs mx-auto mb-8">
-          La creación de eventos es una herramienta exclusiva para los organizadores profesionales con membresía Business.
+        <h1 className="text-2xl font-black text-foreground tracking-tight mb-3">Acceso Restringido</h1>
+        <p className="text-muted-foreground text-[15px] font-medium leading-relaxed max-w-xs mx-auto mb-8">
+          La creación de eventos es una herramienta exclusiva para los miembros con membresía Acceso Total.
         </p>
         
         <div className="space-y-3 w-full max-w-xs">
           <Button 
             onClick={() => navigate('/premium')}
-            className="w-full h-14 rounded-2xl bg-indigo-600 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-indigo-600/30 hover:bg-indigo-700 active:scale-95 transition-all"
+            className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-black text-sm uppercase tracking-widest shadow-xl shadow-primary/30 hover:bg-primary/90 active:scale-95 transition-all"
           >
-            Ver Plan Business
+            Ver Plan Acceso Total
           </Button>
           <Button 
             variant="ghost"
             onClick={() => navigate(-1)}
-            className="w-full h-12 rounded-2xl text-slate-500 font-bold hover:bg-slate-200"
+            className="w-full h-12 rounded-2xl text-muted-foreground font-bold hover:bg-secondary"
           >
             Volver
           </Button>
@@ -246,7 +246,7 @@ const CreateEventPage = () => {
     );
   }
 
-  if (isBusiness === null) return null;
+  if (isAllAccess === null) return null;
 
   return (
     <div className="pb-24 px-5 pt-safe">

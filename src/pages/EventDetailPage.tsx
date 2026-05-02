@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '@/lib/supabase';
 import {
   Drawer,
@@ -27,17 +28,18 @@ import {
 } from '@/components/ui/drawer';
 
 const AMENITY_ICONS: Record<string, any> = {
-  wifi: { icon: <Wifi className="w-5 h-5 text-blue-600" />, label: "WiFi", info: "Conexión a internet incluida" },
-  parking: { icon: <Car className="w-5 h-5 text-amber-600" />, label: "Parking", info: "Estacionamiento disponible" },
-  food: { icon: <Utensils className="w-5 h-5 text-red-500" />, label: "Comida", info: "Opciones de comida" },
-  music: { icon: <Music className="w-5 h-5 text-indigo-600" />, label: "Música", info: "Música en vivo o ambiental" },
-  ac: { icon: <Snowflake className="w-5 h-5 text-sky-500" />, label: "Clima", info: "Ambiente climatizado" },
-  drinks: { icon: <GlassWater className="w-5 h-5 text-pink-500" />, label: "Bar", info: "Bebidas disponibles" },
-  tv: { icon: <Tv className="w-5 h-5 text-purple-600" />, label: "Pantallas", info: "Pantallas de video" },
-  access: { icon: <Accessibility className="w-5 h-5 text-emerald-600" />, label: "Accesible", info: "Apto para silla de ruedas" },
+  wifi: { icon: <Wifi className="w-5 h-5 text-blue-600" />, key: 'wifi' },
+  parking: { icon: <Car className="w-5 h-5 text-amber-600" />, key: 'parking' },
+  food: { icon: <Utensils className="w-5 h-5 text-red-500" />, key: 'food' },
+  music: { icon: <Music className="w-5 h-5 text-indigo-600" />, key: 'music' },
+  ac: { icon: <Snowflake className="w-5 h-5 text-sky-500" />, key: 'ac' },
+  drinks: { icon: <GlassWater className="w-5 h-5 text-pink-500" />, key: 'drinks' },
+  tv: { icon: <Tv className="w-5 h-5 text-purple-600" />, key: 'tv' },
+  access: { icon: <Accessibility className="w-5 h-5 text-emerald-600" />, key: 'access' },
 };
 
 const EventDetailPage = () => {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const [selectedAmenity, setSelectedAmenity] = useState<number | null>(null);
@@ -119,16 +121,16 @@ const EventDetailPage = () => {
           setChatRoomId(roomData.id);
         }
 
-        // Check membership status
-        const { data: membership } = await supabase
-          .from('memberships')
-          .select('id')
+        // Check membership status (any active subscription)
+        const { data: subscription } = await supabase
+          .from('subscriptions')
+          .select('id, plan_id')
           .eq('user_id', user.id)
           .eq('status', 'active')
-          .gt('expiration_date', new Date().toISOString())
+          .gt('expires_at', new Date().toISOString())
           .maybeSingle();
         
-        setHasMembership(!!membership);
+        setHasMembership(!!subscription);
       }
 
       // Fetch some follower avatars
@@ -203,7 +205,7 @@ const EventDetailPage = () => {
 
       } catch (error) {
         console.error("Main event fetch failed:", error);
-        toast.error('Evento no encontrado');
+        toast.error(t('explore.no_events'));
         navigate('/');
       } finally {
         setLoading(false);
@@ -255,7 +257,7 @@ const EventDetailPage = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error('Inicia sesión para guardar favoritos');
+        toast.error(t('event_detail.login_to_fav'));
         return;
       }
 
@@ -268,7 +270,7 @@ const EventDetailPage = () => {
         if (error) throw error;
         setIsFavorite(false);
         setFavoriteId(null);
-        toast.success('Eliminado de favoritos');
+        toast.success(t('event_detail.fav_removed'));
       } else {
         const { data, error } = await supabase
           .from('favorites')
@@ -282,7 +284,7 @@ const EventDetailPage = () => {
         if (error) throw error;
         setIsFavorite(true);
         setFavoriteId(data.id);
-        toast.success('¡Añadido a favoritos!');
+        toast.success(t('event_detail.fav_added'));
       }
     } catch (error) {
       console.error(error);
@@ -294,7 +296,7 @@ const EventDetailPage = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error('Inicia sesión para seguir este evento');
+        toast.error(t('event_detail.login_to_follow'));
         return;
       }
 
@@ -307,7 +309,7 @@ const EventDetailPage = () => {
 
         if (error) throw error;
         setIsFollowing(false);
-        toast.success('Ya no sigues este evento');
+        toast.success(t('event_detail.unfollow_success'));
       } else {
         const { error } = await supabase
           .from('event_followers')
@@ -318,7 +320,7 @@ const EventDetailPage = () => {
 
         if (error) throw error;
         setIsFollowing(true);
-        toast.success('¡Ahora sigues este evento!');
+        toast.success(t('event_detail.follow_success'));
 
         // Also add to event chat room if exists
         const { data: room } = await supabase
@@ -361,7 +363,7 @@ const EventDetailPage = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error('Inicia sesión para entrar al chat');
+        toast.error(t('event_detail.login_to_chat'));
         return;
       }
 
@@ -406,7 +408,7 @@ const EventDetailPage = () => {
       navigate(`/chat/${targetRoomId}`);
     } catch (error: any) {
       console.error("Join chat error:", error);
-      toast.error('No se pudo abrir el chat');
+      toast.error(t('chat_room.error_loading'));
     } finally {
       setLoading(false);
     }
@@ -416,16 +418,16 @@ const EventDetailPage = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error('Inicia sesión para contactar al organizador');
+        toast.error(t('event_detail.login_to_contact'));
         navigate('/auth');
         return;
       }
 
       if (!hasMembership) {
-        toast.error('Necesitas una membresía activa para contactar organizadores', {
-          description: 'Activa tu membresía ahora para desbloquear el chat directo.',
+        toast.error(t('event_detail.membership_required'), {
+          description: t('event_detail.membership_desc'),
           action: {
-            label: 'Comprar',
+            label: t('event_detail.membership_buy'),
             onClick: () => handleBuyMembership()
           }
         });
@@ -433,7 +435,7 @@ const EventDetailPage = () => {
       }
 
       if (user.id === event.organizer_id) {
-        toast.error('No puedes iniciar un chat contigo mismo');
+        toast.error(t('event_detail.self_chat_error'));
         return;
       }
 
@@ -512,7 +514,7 @@ const EventDetailPage = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error('Inicia sesión para obtener tu entrada');
+        toast.error(t('event_detail.get_ticket'));
         navigate('/auth');
         return;
       }
@@ -528,7 +530,7 @@ const EventDetailPage = () => {
         .maybeSingle();
 
       if (existing) {
-        toast.info('Ya tienes una entrada para este evento');
+        toast.info(t('event_detail.ticket_owned'));
         navigate('/tickets');
         return;
       }
@@ -578,7 +580,7 @@ const EventDetailPage = () => {
           .upsert({ room_id: targetRoomId, user_id: user.id }, { onConflict: 'room_id,user_id' });
       }
 
-      toast.success('¡Entrada obtenida con éxito! 🎉');
+      toast.success(t('event_detail.ticket_success'));
       setHasTicket(true);
       fetchSecondaryData(); // Refresh state to show reviews form and change button action
     } catch (error: any) {
@@ -589,29 +591,8 @@ const EventDetailPage = () => {
     }
   };
 
-  const handleBuyMembership = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const expiration = new Date();
-      expiration.setMonth(expiration.getMonth() + 1);
-
-      const { error } = await supabase
-        .from('memberships')
-        .insert({
-          user_id: user.id,
-          status: 'active',
-          expiration_date: expiration.toISOString()
-        });
-
-      if (error) throw error;
-
-      setHasMembership(true);
-      toast.success('¡Membresía activada con éxito!');
-    } catch (e) {
-      toast.error('Error al activar membresía');
-    }
+  const handleBuyMembership = () => {
+    navigate('/premium');
   };
 
   const handleSubmitReview = async () => {
@@ -668,7 +649,7 @@ const EventDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -692,16 +673,16 @@ const EventDetailPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white pb-24 animate-fade-in">
+    <div className="min-h-screen bg-background pb-24 animate-fade-in">
       {/* Sticky Top Navbar */}
       <div className={`fixed top-0 left-0 right-0 z-50 px-6 py-4 flex justify-between items-center transition-all duration-300 pointer-events-none ${
-        isScrolled ? 'bg-white/90 backdrop-blur-xl border-b border-slate-100 shadow-sm py-3' : 'bg-transparent pt-10'
+        isScrolled ? 'bg-background/90 backdrop-blur-xl border-b border-border shadow-sm py-3' : 'bg-transparent pt-10'
       }`}>
         <button 
           onClick={() => navigate(-1)} 
           className={`p-3 rounded-2xl transition-all pointer-events-auto shadow-lg border ${
             isScrolled 
-              ? 'bg-slate-100 border-slate-200 text-slate-900 hover:bg-slate-200' 
+              ? 'bg-secondary border-border text-foreground hover:bg-secondary/80' 
               : 'bg-white/20 border-white/20 text-white hover:bg-white/30 backdrop-blur-xl'
           }`}
         >
@@ -711,7 +692,7 @@ const EventDetailPage = () => {
           <button 
             className={`p-3 rounded-2xl transition-all shadow-lg border ${
               isScrolled 
-                ? 'bg-slate-100 border-slate-200 text-slate-900 hover:bg-slate-200' 
+                ? 'bg-secondary border-border text-foreground hover:bg-secondary/80' 
                 : 'bg-white/20 border-white/20 text-white hover:bg-white/30 backdrop-blur-xl'
             }`}
             onClick={() => {
@@ -725,18 +706,18 @@ const EventDetailPage = () => {
             onClick={toggleFollow}
             className={`flex items-center gap-2 px-4 py-3 rounded-2xl border transition-all active:scale-95 shadow-lg ${
               isScrolled
-                ? (isFollowing ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-slate-100 border-slate-200 text-slate-900 hover:bg-slate-200')
+                ? (isFollowing ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-secondary border-border text-foreground hover:bg-secondary/80')
                 : (isFollowing ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white/20 border-white/20 text-white hover:bg-white/30 backdrop-blur-xl')
             }`}
           >
             <Users className="w-5 h-5" />
-            <span className="text-xs font-black uppercase tracking-widest">{isFollowing ? 'Siguiendo' : 'Seguir'}</span>
+            <span className="text-xs font-black uppercase tracking-widest">{isFollowing ? t('common.following') : t('common.follow')}</span>
           </button>
           <button 
             onClick={toggleFavorite}
             className={`p-3 rounded-2xl border transition-all shadow-lg ${
               isScrolled
-                ? (isFavorite ? 'bg-red-500 border-red-500 text-white' : 'bg-slate-100 border-slate-200 text-slate-900 hover:bg-slate-200')
+                ? (isFavorite ? 'bg-red-500 border-red-500 text-white' : 'bg-secondary border-border text-foreground hover:bg-secondary/80')
                 : (isFavorite ? 'bg-red-500 border-red-500 text-white' : 'bg-white/20 border-white/20 text-white hover:bg-white/30 backdrop-blur-xl')
             }`}
           >
@@ -767,7 +748,7 @@ const EventDetailPage = () => {
             <Badge className="bg-primary text-white border-none px-4 py-1.5 font-black text-[10px] uppercase tracking-widest">{event.category}</Badge>
             {isFree && (
               <Badge className="bg-emerald-500 text-white border-none px-4 py-1.5 font-black text-[10px] uppercase tracking-widest flex items-center gap-1">
-                <Sparkles className="w-3 h-3" /> Gratis
+                <Sparkles className="w-3 h-3" /> {t('event_detail.free')}
               </Badge>
             )}
           </div>
@@ -778,7 +759,7 @@ const EventDetailPage = () => {
         {eventImages.length > 1 && (
           <div className="absolute bottom-20 right-6 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
             <Users className="w-3 h-3 text-white/70" />
-            <span className="text-[10px] font-black text-white uppercase tracking-widest">{eventImages.length} Fotos</span>
+            <span className="text-[10px] font-black text-white uppercase tracking-widest">{t('event_detail.photos_count', { count: eventImages.length })}</span>
           </div>
         )}
       </div>
@@ -786,7 +767,7 @@ const EventDetailPage = () => {
       {/* Image Gallery Dialog */}
       <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
         <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black/95 border-none h-[80vh] sm:h-auto flex flex-col justify-center">
-          <DialogTitle className="sr-only">Galería de Fotos</DialogTitle>
+          <DialogTitle className="sr-only">{t('event_detail.gallery_title')}</DialogTitle>
           <div className="relative w-full aspect-video sm:aspect-[16/9] bg-black group/gallery">
             <img 
               src={eventImages[currentImageIndex]} 
@@ -847,26 +828,26 @@ const EventDetailPage = () => {
         </DialogContent>
       </Dialog>
 
-      <div className="px-5 -mt-6 relative z-10 bg-white rounded-t-[40px] pt-8 space-y-8">
+      <div className="px-5 -mt-6 relative z-10 bg-background rounded-t-[40px] pt-8 space-y-8">
 
         {/* Quick Info Grid */}
         <div className="flex flex-col gap-3">
           {/* Date & Time Row */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col justify-center p-5 bg-white rounded-[28px] border border-slate-100 shadow-sm">
+            <div className="flex flex-col justify-center p-5 bg-card rounded-[28px] border border-border shadow-sm">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600"><Calendar className="w-4 h-4" /></div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Fecha</p>
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary"><Calendar className="w-4 h-4" /></div>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{t('common.date')}</p>
               </div>
-              <p className="text-[13px] font-black text-slate-900 leading-tight">{event.event_date}</p>
+              <p className="text-[13px] font-black text-foreground leading-tight">{event.event_date}</p>
             </div>
 
-            <div className="flex flex-col justify-center p-5 bg-white rounded-[28px] border border-slate-100 shadow-sm">
+            <div className="flex flex-col justify-center p-5 bg-card rounded-[28px] border border-border shadow-sm">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-500"><Clock className="w-4 h-4" /></div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Horario</p>
+                <div className="w-8 h-8 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500"><Clock className="w-4 h-4" /></div>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{t('common.time')}</p>
               </div>
-              <p className="text-[13px] font-black text-slate-900 leading-tight">{event.event_time}</p>
+              <p className="text-[13px] font-black text-foreground leading-tight">{event.event_time}</p>
             </div>
           </div>
 
@@ -875,7 +856,7 @@ const EventDetailPage = () => {
             <div className="flex items-center gap-4 min-w-0">
               <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10 shrink-0"><MapPin className="w-6 h-6 text-emerald-400" /></div>
               <div className="min-w-0 pr-4">
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Ubicación</p>
+                <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wider mb-1">{t('event_detail.location')}</p>
                 <h3 className="text-[13px] font-black text-white truncate">{event.location}</h3>
               </div>
             </div>
@@ -888,21 +869,21 @@ const EventDetailPage = () => {
               <div className="flex -space-x-3">
                 {followers.length > 0 ? (
                   followers.map((avatar, i) => (
-                    <div key={i} className="w-10 h-10 rounded-full border-4 border-white overflow-hidden bg-slate-100 shadow-sm">
+                    <div key={i} className="w-10 h-10 rounded-full border-4 border-background overflow-hidden bg-muted shadow-sm">
                       <img src={avatar} alt="Follower" className="w-full h-full object-cover" />
                     </div>
                   ))
                 ) : (
                   [1, 2, 3].map(i => (
-                    <div key={i} className="w-10 h-10 rounded-full border-4 border-white bg-slate-100 flex items-center justify-center">
-                      <Users className="w-4 h-4 text-slate-300" />
+                    <div key={i} className="w-10 h-10 rounded-full border-4 border-background bg-muted flex items-center justify-center">
+                      <Users className="w-4 h-4 text-muted-foreground" />
                     </div>
                   ))
                 )}
               </div>
               <div>
-                <p className="text-[13px] font-black text-slate-900">+{event.attendees_count || 0} asistirán</p>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gente que conoces</p>
+                <p className="text-[13px] font-black text-foreground">+{event.attendees_count || 0} {t('event_detail.attendees')}</p>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{t('event_detail.friends_attending')}</p>
               </div>
             </div>
           </div>
@@ -912,42 +893,29 @@ const EventDetailPage = () => {
 
         {/* Description */}
         <div className="px-1">
-          <h2 className="text-lg font-black text-slate-900 tracking-tight mb-3">Sobre el evento</h2>
-          <p className="text-slate-500 text-[13px] leading-relaxed font-medium">{event.description}</p>
+          <h2 className="text-lg font-black text-foreground tracking-tight mb-3">{t('event_detail.about')}</h2>
+          <p className="text-muted-foreground text-[13px] leading-relaxed font-medium">{event.description}</p>
         </div>
 
         {/* Organizer Section */}
-        <div className="flex items-center justify-between p-6 bg-slate-50/50 rounded-[40px] border border-slate-100">
+        <div className="flex items-center justify-between p-6 bg-secondary/30 rounded-[40px] border border-border">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-white border border-slate-100 p-1">
+            <div className="w-14 h-14 rounded-2xl bg-card border border-border p-1">
               <img src={organizerProfile?.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100'} alt="Organizer" className="w-full h-full object-cover rounded-xl" />
             </div>
             <div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Organizador</p>
-              <h3 className="text-sm font-black text-slate-900 leading-tight">{organizerProfile?.full_name || 'Organizador'}</h3>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mb-1">{t('event_detail.organizer')}</p>
+              <h3 className="text-sm font-black text-foreground leading-tight">{organizerProfile?.full_name || 'Organizador'}</h3>
             </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            {!hasMembership && (
-              <p className="text-[9px] text-rose-500 font-black uppercase text-center">Activa membresía para chat</p>
-            )}
-            <Button
-              onClick={handleOrganizerChat}
-              className={`h-11 rounded-xl px-6 font-black uppercase tracking-widest text-[10px] transition-all flex items-center gap-2 ${hasMembership ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-200 text-slate-400'
-                }`}
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span>Contactar</span>
-            </Button>
           </div>
         </div>
 
         {/* Organizer Info Drawer */}
         <Drawer open={isOrganizerDrawerOpen} onOpenChange={setIsOrganizerDrawerOpen}>
-          <DrawerContent className="max-h-[85vh] p-0 overflow-hidden rounded-t-[40px] border-none shadow-2xl">
-            <div className="p-8 pb-10 space-y-8 bg-white">
+          <DrawerContent className="max-h-[85vh] p-0 overflow-hidden rounded-t-[40px] border-none shadow-2xl bg-background">
+            <div className="p-8 pb-10 space-y-8 bg-background">
               <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-24 h-24 rounded-[32px] bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-4 border-white shadow-xl overflow-hidden relative group">
+                <div className="w-24 h-24 rounded-[32px] bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-4 border-background shadow-xl overflow-hidden relative group">
                   <img
                     src={event.organizer_avatar || organizerProfile?.avatar_url || `https://i.pravatar.cc/150?u=${event.organizer_id}`}
                     alt={event.organizer_name || organizerProfile?.full_name}
@@ -960,13 +928,13 @@ const EventDetailPage = () => {
                   )}
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-slate-900 tracking-tight">{event.organizer_name || organizerProfile?.full_name || 'Organizador'}</h3>
+                  <h3 className="text-2xl font-black text-foreground tracking-tight">{event.organizer_name || organizerProfile?.full_name || 'Organizador'}</h3>
                   <div className="flex items-center justify-center gap-2 mt-1">
-                    <Badge variant="secondary" className="bg-slate-100 text-slate-500 border-none font-bold text-[10px] uppercase tracking-widest px-3 py-1">
+                    <Badge variant="secondary" className="bg-secondary text-muted-foreground border-none font-bold text-[10px] uppercase tracking-widest px-3 py-1">
                       {organizerProfile?.role || 'Organizador'}
                     </Badge>
                     {organizerProfile?.location && (
-                      <span className="text-slate-400 text-[11px] font-bold flex items-center gap-1">
+                      <span className="text-muted-foreground text-[11px] font-bold flex items-center gap-1">
                         <MapPin className="w-3 h-3" /> {organizerProfile.location}
                       </span>
                     )}
@@ -975,24 +943,24 @@ const EventDetailPage = () => {
               </div>
 
               <div className="grid grid-cols-3 gap-4">
-                <div className="bg-slate-50 rounded-3xl p-4 text-center border border-slate-100">
-                  <p className="text-xl font-black text-slate-900 leading-none mb-1">{organizerProfile?.followers_count || 0}</p>
-                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Seguidores</p>
+                <div className="bg-card rounded-3xl p-4 text-center border border-border">
+                  <p className="text-xl font-black text-foreground leading-none mb-1">{organizerProfile?.followers_count || 0}</p>
+                  <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">{t('common.followers')}</p>
                 </div>
-                <div className="bg-slate-50 rounded-3xl p-4 text-center border border-slate-100">
-                  <p className="text-xl font-black text-slate-900 leading-none mb-1">{organizerProfile?.events_count || 0}</p>
-                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Eventos</p>
+                <div className="bg-card rounded-3xl p-4 text-center border border-border">
+                  <p className="text-xl font-black text-foreground leading-none mb-1">{organizerProfile?.events_count || 0}</p>
+                  <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">{t('profile.my_events')}</p>
                 </div>
-                <div className="bg-slate-50 rounded-3xl p-4 text-center border border-slate-100">
-                  <p className="text-xl font-black text-slate-900 leading-none mb-1">4.9</p>
-                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Rating</p>
+                <div className="bg-card rounded-3xl p-4 text-center border border-border">
+                  <p className="text-xl font-black text-foreground leading-none mb-1">4.9</p>
+                  <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">Rating</p>
                 </div>
               </div>
 
               {organizerProfile?.bio && (
-                <div className="bg-slate-50/50 rounded-3xl p-6 border border-slate-100/50">
-                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-2">Sobre mí</p>
-                  <p className="text-slate-600 text-[13px] leading-relaxed font-medium">
+                <div className="bg-secondary/30 rounded-3xl p-6 border border-border">
+                  <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest mb-2">{t('event_detail.about_me')}</p>
+                  <p className="text-foreground text-[13px] leading-relaxed font-medium">
                     {organizerProfile.bio}
                   </p>
                 </div>
@@ -1001,19 +969,9 @@ const EventDetailPage = () => {
               <div className="flex gap-3">
                 <Button
                   onClick={() => navigate(`/profile/u/${event.organizer_id}`)}
-                  className="flex-1 h-14 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-widest text-[11px] shadow-xl shadow-slate-900/10"
+                  className="flex-1 h-14 rounded-2xl bg-foreground hover:bg-foreground/90 text-background font-black uppercase tracking-widest text-[11px] shadow-xl shadow-black/10"
                 >
                   <User className="w-4 h-4 mr-2" /> Ver Perfil Completo
-                </Button>
-                <Button
-                  onClick={() => {
-                    setIsOrganizerDrawerOpen(false);
-                    isFollowing ? handleOrganizerChat() : toast.error('Sigue el evento para chatear');
-                  }}
-                  variant="outline"
-                  className="h-14 w-14 rounded-2xl border-slate-200 flex items-center justify-center"
-                >
-                  <MessageSquare className="w-5 h-5 text-slate-600" />
                 </Button>
               </div>
             </div>
@@ -1023,7 +981,7 @@ const EventDetailPage = () => {
         {/* Amenities Section */}
         {eventAmenities.length > 0 && (
           <div className="px-1 pb-4">
-            <h2 className="text-lg font-black text-slate-900 tracking-tight mb-4">Servicios Incluidos</h2>
+            <h2 className="text-lg font-black text-foreground tracking-tight mb-4">Servicios Incluidos</h2>
             <div className="flex flex-wrap gap-2.5">
               {eventAmenities.map((item: any, idx: number) => {
                 const textColorClass = item.icon.props.className?.split(' ').find((c: string) => c.startsWith('text-')) || '';
@@ -1033,14 +991,14 @@ const EventDetailPage = () => {
                     key={idx}
                     onClick={() => handleAmenityClick(idx, item.info)}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all active:scale-95 ${selectedAmenity === idx
-                        ? 'bg-slate-900 border-slate-900 text-white shadow-md'
-                        : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                        ? 'bg-foreground border-foreground text-background shadow-md'
+                        : 'bg-card border-border hover:border-primary/50 hover:bg-secondary'
                       }`}
                   >
                     <div className={`flex items-center justify-center ${selectedAmenity === idx ? 'text-white' : textColorClass}`}>
                       {React.cloneElement(item.icon, { className: 'w-4 h-4' })}
                     </div>
-                    <span className={`text-[11px] font-black uppercase tracking-wider ${selectedAmenity === idx ? 'text-white' : 'text-slate-700'}`}>{item.label}</span>
+                    <span className={`text-[11px] font-black uppercase tracking-wider ${selectedAmenity === idx ? 'text-background' : 'text-foreground/80'}`}>{item.label}</span>
                   </button>
                 );
               })}
@@ -1051,31 +1009,31 @@ const EventDetailPage = () => {
         {/* Discrete Reviews Summary */}
         <div 
           onClick={() => setIsReviewsDrawerOpen(true)}
-          className="mx-1 p-5 bg-slate-50/50 rounded-[32px] border border-slate-100 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-all active:scale-[0.98]"
+          className="mx-1 p-5 bg-secondary/20 rounded-[32px] border border-border flex items-center justify-between cursor-pointer hover:bg-secondary/40 transition-all active:scale-[0.98]"
         >
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-amber-500 shadow-sm border border-slate-100">
+            <div className="w-12 h-12 rounded-2xl bg-card flex items-center justify-center text-amber-500 shadow-sm border border-border">
               <Star className="w-6 h-6 fill-current" />
             </div>
             <div>
               <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-sm font-black text-slate-900">
+                <span className="text-sm font-black text-foreground">
                   {reviews.length > 0 
                     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) 
                     : '0.0'}
                 </span>
                 <div className="flex gap-0.5">
                   {[1, 2, 3, 4, 5].map((s) => (
-                    <Star key={s} className={`w-3 h-3 ${s <= Math.round(reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length) ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
+                    <Star key={s} className={`w-3 h-3 ${s <= Math.round(reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`} />
                   ))}
                 </div>
               </div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
                 {reviews.length} {reviews.length === 1 ? 'Reseña' : 'Reseñas'} de la comunidad
               </p>
             </div>
           </div>
-          <ArrowLeft className="w-5 h-5 text-slate-300 rotate-180" />
+          <ArrowLeft className="w-5 h-5 text-muted-foreground rotate-180" />
         </div>
 
         {/* Reviews Drawer */}
@@ -1084,18 +1042,18 @@ const EventDetailPage = () => {
             <div className="p-8 pb-12 overflow-y-auto custom-scrollbar">
               <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">Reseñas</h2>
-                  <p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest mt-1">Qué dicen los asistentes</p>
+                  <h2 className="text-2xl font-black text-foreground tracking-tight">Reseñas</h2>
+                  <p className="text-[12px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Qué dicen los asistentes</p>
                 </div>
                 <div className="flex flex-col items-end">
-                  <span className="text-3xl font-black text-slate-900">
+                  <span className="text-3xl font-black text-foreground">
                     {reviews.length > 0 
                       ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) 
                       : '0.0'}
                   </span>
                   <div className="flex gap-0.5">
                     {[1, 2, 3, 4, 5].map((s) => (
-                      <Star key={s} className={`w-3 h-3 ${s <= Math.round(reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length) ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
+                      <Star key={s} className={`w-3 h-3 ${s <= Math.round(reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`} />
                     ))}
                   </div>
                 </div>
@@ -1103,26 +1061,26 @@ const EventDetailPage = () => {
 
               {/* Add Review Form (Inside Drawer) */}
               {hasTicket && (
-                <div className="mb-10 p-6 bg-slate-50 rounded-[32px] border border-slate-100 space-y-4">
-                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] text-center">Danos tu opinión</p>
+                <div className="mb-10 p-6 bg-secondary/30 rounded-[32px] border border-border space-y-4">
+                  <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] text-center">Danos tu opinión</p>
                   <div className="flex justify-center gap-3">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button key={star} onClick={() => setNewReview({ ...newReview, rating: star })} className="transition-transform active:scale-90">
-                        <Star className={`w-8 h-8 ${star <= newReview.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-300 hover:text-amber-200'}`} />
+                        <Star className={`w-8 h-8 ${star <= newReview.rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground hover:text-amber-200'}`} />
                       </button>
                     ))}
                   </div>
                   <div className="relative">
                     <textarea 
                       placeholder="Comparte tu experiencia en este evento..." 
-                      className="w-full min-h-[100px] p-5 rounded-2xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 text-[13px] font-medium resize-none shadow-sm"
+                      className="w-full min-h-[100px] p-5 rounded-2xl bg-card border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 text-[13px] font-medium resize-none shadow-sm text-foreground"
                       value={newReview.comment}
                       onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
                     />
                     <Button 
                       onClick={handleSubmitReview}
                       disabled={isSubmittingReview}
-                      className="absolute bottom-3 right-3 w-10 h-10 rounded-xl bg-slate-900 hover:bg-black text-white p-0 shadow-lg"
+                      className="absolute bottom-3 right-3 w-10 h-10 rounded-xl bg-foreground hover:bg-foreground/90 text-background p-0 shadow-lg"
                     >
                       {isSubmittingReview ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </Button>
@@ -1134,32 +1092,32 @@ const EventDetailPage = () => {
               <div className="space-y-6">
                 {reviews.length > 0 ? (
                   reviews.map((review) => (
-                    <div key={review.id} className="pb-6 border-b border-slate-50 last:border-0">
+                    <div key={review.id} className="pb-6 border-b border-border/50 last:border-0">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <img src={review.profiles?.avatar_url || 'https://i.pravatar.cc/100'} alt={review.profiles?.full_name} className="w-10 h-10 rounded-xl object-cover border border-slate-100" />
+                          <img src={review.profiles?.avatar_url || 'https://i.pravatar.cc/100'} alt={review.profiles?.full_name} className="w-10 h-10 rounded-xl object-cover border border-border" />
                           <div>
-                            <h4 className="text-[13px] font-black text-slate-900 leading-tight">{review.profiles?.full_name || 'Usuario'}</h4>
+                            <h4 className="text-[13px] font-black text-foreground leading-tight">{review.profiles?.full_name || 'Usuario'}</h4>
                             <div className="flex gap-0.5 mt-0.5">
                               {[1, 2, 3, 4, 5].map((s) => (
-                                <Star key={s} className={`w-2.5 h-2.5 ${s <= review.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-100'}`} />
+                                <Star key={s} className={`w-2.5 h-2.5 ${s <= review.rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`} />
                               ))}
                             </div>
                           </div>
                         </div>
-                        <span className="text-[10px] text-slate-400 font-bold">
+                        <span className="text-[10px] text-muted-foreground font-bold">
                           {new Date(review.created_at).toLocaleDateString()}
                         </span>
                       </div>
-                      <p className="text-slate-600 text-[13px] leading-relaxed font-medium pl-1">
+                      <p className="text-muted-foreground text-[13px] leading-relaxed font-medium pl-1">
                         {review.comment}
                       </p>
                     </div>
                   ))
                 ) : (
                   <div className="text-center py-12">
-                    <MessageSquare className="w-12 h-12 text-slate-100 mx-auto mb-4" />
-                    <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">No hay reseñas todavía</p>
+                    <MessageSquare className="w-12 h-12 text-muted-foreground/20 mx-auto mb-4" />
+                    <p className="text-muted-foreground font-black uppercase tracking-widest text-[10px]">No hay reseñas todavía</p>
                   </div>
                 )}
               </div>
@@ -1171,10 +1129,10 @@ const EventDetailPage = () => {
         <div className="h-4"></div>
 
         {/* Floating Bottom Bar */}
-        <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/95 backdrop-blur-xl border-t border-slate-100 z-50 flex items-center justify-between gap-4">
+        <div className="fixed bottom-0 left-0 right-0 p-6 bg-background/95 backdrop-blur-xl border-t border-border z-50 flex items-center justify-between gap-4">
           <div className="flex flex-col">
-            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none mb-1">Precio</p>
-            <p className="text-xl font-black text-slate-900 leading-none">
+            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest leading-none mb-1">Precio</p>
+            <p className="text-xl font-black text-foreground leading-none">
               {isFree ? 'Gratis' : `$${event.price}`}
             </p>
           </div>
@@ -1206,7 +1164,7 @@ const EventDetailPage = () => {
                 }
               }}
               className={`flex-1 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] border transition-all flex flex-col items-center justify-center gap-1 ${
-                hasTicket ? 'bg-indigo-50 border-indigo-100 text-indigo-600' : 'bg-slate-50 border-slate-100 text-slate-400'
+                hasTicket ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-secondary border-border text-muted-foreground shadow-none'
               }`}
             >
               <Ticket className="w-5 h-5" />
@@ -1218,7 +1176,7 @@ const EventDetailPage = () => {
               onClick={() => isFree ? handleFreeTicket() : navigate(`/checkout/${id}`)}
               className={`flex-[2] h-14 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-2xl transition-all ${isFree
                   ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20 text-white'
-                  : 'bg-slate-900 hover:bg-slate-800 shadow-slate-900/20 text-white'
+                  : 'bg-foreground hover:opacity-90 shadow-black/20 text-background'
                 }`}
             >
               {isFree ? (hasTicket ? 'Adquirida' : 'Obtener') : 'Comprar'}

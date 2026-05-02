@@ -90,35 +90,35 @@ const FavoritesPage = () => {
             return (
               <Card 
                 key={favorite.id} 
-                className="overflow-hidden border border-slate-100 shadow-sm bg-white hover:shadow-md transition-shadow cursor-pointer"
+                className="overflow-hidden border border-border shadow-sm bg-card hover:shadow-md transition-shadow cursor-pointer"
                 onClick={() => navigate(`/event/${event.id}`)}
               >
                 <div className="flex h-32">
                   <div className="w-32 h-full shrink-0 relative">
                     <img src={event.image_url || event.image || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800'} alt={event.title} className="w-full h-full object-cover" />
                     <div className="absolute top-2 left-2">
-                      <span className="px-2 py-1 rounded-md bg-white/90 backdrop-blur-sm text-[8px] font-black uppercase text-slate-900">{event.category}</span>
+                      <span className="px-2 py-1 rounded-md bg-background/90 backdrop-blur-sm text-[8px] font-black uppercase text-foreground">{event.category}</span>
                     </div>
                   </div>
                   
                   <CardContent className="flex-1 p-3 flex flex-col justify-between overflow-hidden">
                     <div>
                       <div className="flex justify-between items-start gap-2">
-                        <h3 className="font-bold text-sm text-slate-900 line-clamp-2 leading-tight">{event.title}</h3>
+                        <h3 className="font-bold text-sm text-foreground line-clamp-2 leading-tight">{event.title}</h3>
                         <button 
                           onClick={(e) => handleRemoveFavorite(e, favorite.id)}
-                          className="p-1.5 rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition-colors shrink-0"
+                          className="p-1.5 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors shrink-0"
                         >
                           <Heart className="w-4 h-4 fill-current" />
                         </button>
                       </div>
                       
                       <div className="mt-1.5 space-y-1">
-                        <div className="flex items-center gap-1.5 text-slate-500 text-[10px] font-medium">
+                        <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] font-medium">
                           <Calendar className="w-3 h-3 text-primary shrink-0" />
                           <span className="truncate">{(event.event_date || event.date)} • {(event.event_time || event.time)}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-slate-500 text-[10px] font-medium">
+                        <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] font-medium">
                           <MapPin className="w-3 h-3 text-primary shrink-0" />
                           <span className="truncate">{event.location}</span>
                         </div>
@@ -128,7 +128,7 @@ const FavoritesPage = () => {
                     <div className="flex justify-between items-center pt-2">
                       <div className="flex items-center gap-1">
                         <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                        <span className="text-[10px] font-bold text-slate-700">5.0</span>
+                        <span className="text-[10px] font-bold text-muted-foreground">5.0</span>
                       </div>
                       <p className="text-xs font-black text-primary">
                         {priceDisplay}
@@ -145,14 +145,14 @@ const FavoritesPage = () => {
               <Heart className="w-12 h-12 text-white fill-white" />
             </div>
             <div className="space-y-2">
-              <h3 className="font-black text-2xl text-slate-900 tracking-tight">¡Aún no hay favoritos!</h3>
-              <p className="text-slate-500 text-[15px] font-medium leading-relaxed">
+              <h3 className="font-black text-2xl text-foreground tracking-tight">¡Aún no hay favoritos!</h3>
+              <p className="text-muted-foreground text-[15px] font-medium leading-relaxed">
                 Descubre un mundo lleno de eventos increíbles y guarda aquí los que más te llamen la atención.
               </p>
             </div>
             <button 
               onClick={() => navigate('/')}
-              className="mt-6 px-8 py-4 bg-slate-900 text-white rounded-[20px] font-black text-sm uppercase tracking-widest shadow-xl shadow-slate-900/20 active:scale-95 transition-all w-full hover:bg-primary hover:shadow-primary/30"
+              className="mt-6 px-8 py-4 bg-foreground text-background rounded-[20px] font-black text-sm uppercase tracking-widest shadow-xl shadow-foreground/10 active:scale-95 transition-all w-full hover:opacity-90"
             >
               ¡Comenzar a explorar!
             </button>

@@ -6,6 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { allCategories, categoryEmojis } from '@/data/mockData';
+import { Check, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
@@ -17,8 +20,11 @@ const EditProfilePage = () => {
     email: '',
     phone: '',
     location: '',
+    bio: '',
     avatar_url: ''
   });
+
+  const [selectedPreferences, setSelectedPreferences] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -41,8 +47,15 @@ const EditProfilePage = () => {
           email: user.email || '',
           phone: user.user_metadata?.phone || profile?.phone || '',
           location: user.user_metadata?.location || profile?.location || '',
+          bio: profile?.bio || user.user_metadata?.bio || '',
           avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url || ''
         });
+
+        if (profile?.preferences) {
+          setSelectedPreferences(profile.preferences);
+        } else if (user.user_metadata?.preferences) {
+          setSelectedPreferences(user.user_metadata.preferences);
+        }
       } catch (error) {
         console.error('Error fetching profile:', error);
       } finally {
@@ -53,7 +66,7 @@ const EditProfilePage = () => {
     fetchProfile();
   }, [navigate]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -70,41 +83,63 @@ const EditProfilePage = () => {
     reader.readAsDataURL(file);
   };
 
+  const togglePreference = (category: string) => {
+    if (selectedPreferences.includes(category)) {
+      setSelectedPreferences(selectedPreferences.filter(c => c !== category));
+    } else {
+      setSelectedPreferences([...selectedPreferences, category]);
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No hay sesión activa');
 
-      // 1. Intentamos guardar en profiles si es posible
+      // 1. Save EVERYTHING to the profiles table (source of truth for ProfilePage)
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
           id: session.user.id,
           full_name: formData.full_name,
           avatar_url: formData.avatar_url,
+          preferences: selectedPreferences,
+          tags: selectedPreferences, // Keep tags in sync for backward compatibility
+          location: formData.location,
+          phone: formData.phone,
+          bio: formData.bio,
           updated_at: new Date().toISOString(),
         });
       
-      if (profileError && !profileError.message.includes('column')) {
-        console.warn('Error saving to profiles:', profileError);
+      if (profileError) {
+        console.error('Error saving to profiles:', profileError);
+        throw new Error('No se pudo actualizar el perfil en la base de datos');
       }
 
-      // 2. Guardamos TODO en user_metadata para evitar problemas de esquema con location/phone
+      // 2. Also update user_metadata for session consistency
       const { error: authError } = await supabase.auth.updateUser({
         data: { 
           full_name: formData.full_name, 
           avatar_url: formData.avatar_url,
           phone: formData.phone,
-          location: formData.location
+          location: formData.location,
+          bio: formData.bio,
+          preferences: selectedPreferences
         }
       });
 
       if (authError) throw authError;
 
+      // Dispatch event for ProfilePage to refresh
+      window.dispatchEvent(new Event('profile-updated'));
+
       toast.success('Perfil actualizado correctamente');
-      navigate(-1);
+      
+      // Force a small delay before navigating to allow DB to propagate (optional but helpful)
+      setTimeout(() => navigate(-1), 500);
     } catch (error: any) {
+      console.error('Save error:', error);
       toast.error('Error al actualizar el perfil: ' + error.message);
     } finally {
       setSaving(false);
@@ -224,6 +259,60 @@ const EditProfilePage = () => {
                 onChange={handleChange}
                 placeholder="Ej. Ciudad de México"
                 className="pl-10 h-12 rounded-xl bg-secondary/50 border-transparent focus-visible:ring-primary/20"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="bio" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Biografía</Label>
+            <textarea 
+              id="bio"
+              name="bio"
+              value={formData.bio}
+              onChange={handleChange}
+              placeholder="Cuéntanos un poco sobre ti..."
+              rows={4}
+              className="w-full p-4 rounded-xl bg-secondary/50 border-transparent focus:ring-2 focus:ring-primary/20 outline-none text-sm resize-none transition-all"
+            />
+          </div>
+        </div>
+
+        {/* Interests Section */}
+        <div className="space-y-4 bg-card p-6 rounded-3xl border border-border shadow-sm">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+              <Sparkles className="w-3 h-3 text-primary" />
+              Tus Intereses
+            </Label>
+            <span className="text-[10px] font-bold text-primary">Mín. 3</span>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-2">
+            {allCategories.map((category) => (
+              <motion.button
+                key={category}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => togglePreference(category)}
+                className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
+                  selectedPreferences.includes(category)
+                    ? 'border-primary bg-primary/5 text-primary shadow-sm'
+                    : 'border-transparent bg-secondary/50 text-muted-foreground hover:bg-secondary'
+                }`}
+              >
+                <span className="text-lg">{categoryEmojis[category]}</span>
+                <span className="text-[11px] font-bold capitalize">{category}</span>
+                {selectedPreferences.includes(category) && (
+                  <Check className="w-3.5 h-3.5 ml-auto" />
+                )}
+              </motion.button>
+            ))}
+          </div>
+          
+          <div className="pt-2">
+            <div className="w-full bg-secondary h-1.5 rounded-full overflow-hidden">
+              <motion.div 
+                animate={{ width: `${Math.min((selectedPreferences.length / 3) * 100, 100)}%` }}
+                className={`h-full ${selectedPreferences.length >= 3 ? 'bg-green-500' : 'bg-primary'}`}
               />
             </div>
           </div>

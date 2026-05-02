@@ -14,7 +14,7 @@ const MyEventsPage = () => {
   const navigate = useNavigate();
   const [myEvents, setMyEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isBusiness, setIsBusiness] = useState(false);
+  const [isAllAccess, setIsAllAccess] = useState(false);
 
   useEffect(() => {
     const fetchMyEvents = async () => {
@@ -29,7 +29,7 @@ const MyEventsPage = () => {
             .eq('status', 'active')
             .maybeSingle();
           
-          setIsBusiness(sub?.plan_id === 'Business');
+          setIsAllAccess(sub?.plan_id === 'Acceso Total');
 
           // Fetch events created by user
           const { data, error } = await supabase
@@ -75,7 +75,7 @@ const MyEventsPage = () => {
           </button>
           <h1 className="text-xl font-bold">Mis Eventos</h1>
         </div>
-        {isBusiness && (
+        {isAllAccess && (
           <Button size="sm" className="rounded-full gap-1.5 h-8 px-4" onClick={() => navigate('/create')}>
             <Plus className="w-4 h-4" /> Nuevo
           </Button>
@@ -144,14 +144,14 @@ const MyEventsPage = () => {
               </div>
             </div>
           ))
-        ) : isBusiness ? (
+        ) : isAllAccess ? (
           <div className="text-center py-20 px-6 animate-in fade-in zoom-in-95 duration-500">
             <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
               <Plus className="w-10 h-10 text-primary" />
             </div>
-            <h3 className="font-black text-2xl text-slate-900 tracking-tight mb-2">No hay eventos todavía</h3>
-            <p className="text-slate-500 text-[15px] font-medium leading-relaxed max-w-[280px] mx-auto mb-8">
-              ¡Ya tienes acceso Business! Es hora de crear tu primer evento y compartirlo con el mundo.
+            <h3 className="font-black text-2xl text-foreground tracking-tight mb-2">No hay eventos todavía</h3>
+            <p className="text-muted-foreground text-[15px] font-medium leading-relaxed max-w-[280px] mx-auto mb-8">
+              ¡Ya tienes Acceso Total! Es hora de crear tu primer evento y compartirlo con el mundo.
             </p>
             <Button
               onClick={() => navigate('/create')}
@@ -167,19 +167,19 @@ const MyEventsPage = () => {
               <div className="absolute inset-0 bg-gradient-to-bl from-indigo-500 via-purple-500 to-pink-500 rounded-[32px] -rotate-3 flex items-center justify-center shadow-2xl shadow-purple-500/30">
                 <Rocket className="w-12 h-12 text-white" />
               </div>
-              <div className="absolute -top-3 -right-3 bg-white text-indigo-600 rounded-full p-2.5 shadow-lg animate-bounce">
+              <div className="absolute -top-3 -right-3 bg-foreground text-background rounded-full p-2.5 shadow-lg animate-bounce">
                 <Lock className="w-5 h-5" />
               </div>
             </div>
 
-            <h3 className="font-black text-2xl text-slate-900 tracking-tight mb-2">Conviértete en Organizador</h3>
-            <p className="text-slate-500 text-[15px] font-medium leading-relaxed max-w-[280px] mx-auto mb-8">
-              Para poder crear y administrar tus propios eventos, necesitas tener una suscripción a la membresía <span className="font-bold text-indigo-600">Business</span>.
+            <h3 className="font-black text-2xl text-foreground tracking-tight mb-2">Conviértete en Organizador</h3>
+            <p className="text-muted-foreground text-[15px] font-medium leading-relaxed max-w-[280px] mx-auto mb-8">
+              Para poder crear y administrar tus propios eventos, necesitas tener la membresía <span className="font-bold text-primary">Acceso Total</span>.
             </p>
 
             <Button
               onClick={() => navigate('/premium')}
-              className="w-full h-14 rounded-2xl bg-slate-900 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-slate-900/20 active:scale-95 transition-all hover:bg-indigo-600 hover:shadow-indigo-500/30"
+              className="w-full h-14 rounded-2xl bg-foreground text-background font-black text-sm uppercase tracking-widest shadow-xl shadow-foreground/10 active:scale-95 transition-all hover:opacity-90"
             >
               Ver Planes de Membresía
             </Button>

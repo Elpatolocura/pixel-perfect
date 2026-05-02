@@ -1,0 +1,415 @@
+{
+  "common": {
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "follow": "Seguir",
+    "following": "Siguiendo",
+    "unfollow": "Dejar de seguir",
+    "followers": "Seguidores",
+    "send_message": "Enviar mensaje",
+    "back": "Volver",
+    "search": "Buscar",
+    "any_price": "Cualquier precio",
+    "free": "Gratis",
+    "paid": "De pago",
+    "basic_plan": "Plan Básico",
+    "date": "Fecha",
+    "time": "Horario",
+    "view_more": "Ver más",
+    "attendees": "asistirán",
+    "guest": "Invitado",
+    "quantity": "Cantidad",
+    "total": "Total",
+    "event": "Evento"
+  },
+  "location": {
+    "current_location": "Ubicación actual",
+    "locating": "Ubicando...",
+    "near_you": "Cerca de ti",
+    "prompt_city": "Introduce tu ciudad:",
+    "unknown": "Ubicación Desconocida"
+  },
+  "settings": {
+    "title": "Configuración",
+    "account": "Cuenta",
+    "personal_info": "Información Personal",
+    "security": "Seguridad y Contraseña",
+    "notifications": "Notificaciones",
+    "personalization": "Personalización",
+    "appearance_label": "Apariencia y Temas",
+    "interests": "Intereses y Categorías",
+    "language": "Idioma",
+    "dark_mode": "Modo Oscuro",
+    "support": "Soporte",
+    "privacy": "Privacidad y Términos",
+    "help_center": "Centro de Ayuda",
+    "logout": "Cerrar Sesión",
+    "version": "Eventia v1.0.0 · Hecho con ❤️ para la comunidad",
+    "select_language": "Seleccionar Idioma",
+    "language_changed": "Idioma cambiado a {{lang}}",
+    "dark_mode_on": "Modo Oscuro activado",
+    "dark_mode_off": "Modo Claro activado",
+    "notifications_on": "Notificaciones activadas",
+    "notifications_off": "Notificaciones silenciadas",
+    "none": "Ninguno",
+    "appearance": {
+      "title": "Apariencia",
+      "accent_color": "Color de Acento",
+      "interface_style": "Estilo de Interfaz",
+      "requires_pro": "Requiere Acceso Total",
+      "modern": "Moderno",
+      "minimalist": "Minimalista",
+      "color_selected": "Color {{name}} seleccionado",
+      "style_applied": "Estilo {{style}} aplicado",
+      "upgrade_button": "Mejorar a Acceso Total"
+    }
+  },
+  "nav": {
+    "home": "Inicio",
+    "favorites": "Favoritos",
+    "chat": "Chat",
+    "profile": "Perfil"
+  },
+  "home": {
+    "greeting": "Hola, ",
+    "subtitle": "Descubre eventos increíbles cerca de ti",
+    "view_all": "Ver Todo",
+    "recommended": "Recomendado para ti",
+    "popular_today": "Popular hoy",
+    "view_all": "VER TODO",
+    "search_placeholder": "Buscar eventos...",
+    "no_results": {
+      "title": "¡Ups! No hay resultados",
+      "desc_query": "No pudimos encontrar eventos que coincidan con \"{{query}}\".",
+      "desc_category": "No hay eventos disponibles en la categoría {{category}} por ahora.",
+      "view_all": "Ver todos los eventos"
+    },
+    "categories": {
+      "all": "Todos",
+      "music": "Música",
+      "art": "Arte",
+      "food": "Gastronomía",
+      "sports": "Deportes",
+      "tech": "Tech",
+      "culture": "Cultura",
+      "party": "Fiesta",
+      "wellness": "Bienestar"
+    }
+  },
+  "profile": {
+    "my_profile": "Mi Perfil",
+    "profile": "Perfil",
+    "login_title": "Inicia sesión",
+    "login_desc": "Únete a la comunidad de Eventia para gestionar tus eventos y tickets.",
+    "login_button": "Ir a Iniciar Sesión",
+    "my_tickets": "Mis Tickets",
+    "my_events": "Mis Eventos",
+    "created": "Creados",
+    "membership": {
+      "manage": "Administrar Membresía",
+      "upgrade": "Mejorar a Premium",
+      "plan": "Plan",
+      "manage_desc": "Gestiona tu plan Acceso Total y sus beneficios",
+      "upgrade_desc": "Desbloquea funciones exclusivas y mucho más"
+    },
+    "follow_prompt": "Sigue a este usuario para enviar mensajes",
+    "joined": "Miembro desde",
+    "no_bio": "Amante del arte, la música y los eventos comunitarios. ¡A explorar! ✨",
+    "stats": {
+      "attended": "Eventos asistidos"
+    },
+    "created_events": "EVENTOS CREADOS",
+    "attended_events": "EVENTOS ASISTIDOS"
+  },
+  "chat": {
+    "title": "Mensajería",
+    "subtitle": "Comunidad y Amigos",
+    "search_friends": "Buscar Amigos",
+    "search_people": "Buscar Personas",
+    "search_desc": "Encuentra amigos y organizadores",
+    "search_input": "Escribe un nombre...",
+    "updating": "Actualizando chats",
+    "welcome_title": "Conecta con la Comunidad",
+    "welcome_desc": "Únete a los chats de tus eventos favoritos y conoce a personas con tus mismos intereses.",
+    "start_chatting": "Empezar a Chatear",
+    "new_access": "¡Nuevo acceso desbloqueado!",
+    "start_conversation": "Inicia la conversación...",
+    "ticket_required": "Requiere ticket",
+    "follow_back": "Síguelo de vuelta",
+    "no_results": "No se encontraron resultados",
+    "search_min_chars": "Ingresa al menos 2 letras",
+    "error_update": "Error al actualizar tus mensajes",
+    "restricted_access": "Acceso restringido",
+    "join_error": "Error al entrar al chat",
+    "new_messages": "nuevas",
+    "your_conversations": "Tus conversaciones",
+    "suggested_for_you": "Sugeridos para ti",
+    "direct_chats": "Chats Directos",
+    "new_connections": "Nuevas conexiones",
+    "mutual_follow_desc": "Los chats privados se habilitan cuando ambos usuarios se siguen mutuamente.",
+    "tabs": {
+      "events": "Eventos",
+      "private": "Privados"
+    },
+    "time": {
+      "now": "Ahora",
+      "yesterday": "Ayer"
+    }
+  },
+  "chat_room": {
+    "loading": "Cargando chat...",
+    "online": "En línea",
+    "type_message": "Escribe un mensaje...",
+    "replying_to": "Respondiendo a",
+    "file_multimedia": "Archivo multimedia",
+    "you": "Tú",
+    "view_more": "Ver más",
+    "view_less": "Ver menos",
+    "copy_text": "Copiar texto",
+    "copied": "Mensaje copiado al portapapeles",
+    "no_text_copy": "No hay texto para copiar",
+    "forward": "Reenviar",
+    "forward_soon": "Función de reenviar próximamente",
+    "report": "Reportar",
+    "reported": "Mensaje reportado a los moderadores",
+    "deleted": "Mensaje eliminado",
+    "reply": "Responder",
+    "access_blocked": "Acceso Bloqueado",
+    "ticket_access_desc": "Necesitas un ticket válido para participar en el chat grupal de este evento.",
+    "ticket_access_hint": "El chat se activa automáticamente al obtener tu entrada",
+    "get_ticket": "Obtener Mi Ticket",
+    "private_blocked": "Chat Bloqueado",
+    "private_access_desc": "Para chatear en privado, ambos usuarios deben seguirse mutuamente.",
+    "private_access_hint": "Sigue a este usuario y espera a que te siga de vuelta",
+    "go_to_profile": "Ir al Perfil del Usuario",
+    "view_my_chats": "Ver Mis Chats",
+    "event_chat": "Chat del Evento",
+    "private_chat": "Chat Privado",
+    "recent_followers": "Nuevos Seguidores",
+    "welcome_event": "¡Bienvenido al chat de {{name}}!",
+    "no_followers": "Aún no hay seguidores recientes",
+    "send_photo": "Enviar Foto",
+    "send_video": "Enviar Video",
+    "send_file": "Enviar Archivo",
+    "camera": "Cámara",
+    "error_loading": "Error al cargar el chat",
+    "error_send": "No se pudo enviar el mensaje",
+    "login_to_send": "Inicia sesión para enviar mensajes"
+  },
+  "explore": {
+    "title": "Explorar",
+    "loading": "Cargando eventos...",
+    "no_events": "No se encontraron eventos"
+  },
+  "checkout": {
+    "title": "Finalizar Compra",
+    "not_found": "Evento no encontrado",
+    "login_required": "Debes iniciar sesión para comprar tickets",
+    "success": "¡Compra realizada con éxito! Revisa tu email.",
+    "error": "Error al procesar la compra",
+    "select_zone": "Selecciona tu Zona",
+    "max_tickets": "Máximo 5 entradas",
+    "payment_method": "Método de Pago",
+    "total_to_pay": "Total a Pagar",
+    "pay_now": "Pagar Ahora"
+  },
+  "subscription": {
+    "title": "Activar Suscripción",
+    "premium_membership": "Membresía Premium",
+    "billing": {
+      "monthly": "Mensual",
+      "yearly": "Anual",
+      "save": "AHORRA 16%",
+      "per_month": "mes",
+      "per_year": "año"
+    },
+    "payment_data": "Datos de Pago",
+    "card_name": "Nombre en la tarjeta",
+    "card_number": "Número de tarjeta",
+    "expiry": "Vencimiento",
+    "cvc": "CVC",
+    "auto_renew": "Tu suscripción se renovará automáticamente. Puedes cancelar en cualquier momento desde tu configuración.",
+    "subscribe_for": "Suscribirme por ${{price}}",
+    "plans": {
+      "all_access": {
+        "features": ["Estadísticas avanzadas", "Personalización total de tickets", "Manager de cuenta dedicado", "Eventos ilimitados", "Sin anuncios"]
+      }
+    }
+  },
+  "premium": {
+    "title": "Membresías",
+    "choose_level": "Elige tu Nivel",
+    "subtitle": "Pulsa en un plan para desbloquear todos sus beneficios exclusivos.",
+    "benefits_included": "Beneficios incluidos:",
+    "select_plan": "Seleccionar {{name}}",
+    "safe_payment": "Pago 100% Seguro",
+    "safe_payment_desc": "Encriptación SSL de 256 bits",
+    "guarantee": "Garantía Eventia",
+    "guarantee_desc": "Soporte VIP inmediato",
+    "already_basic": "Ya tienes el plan básico",
+    "popular": "POPULAR",
+    "plans": {
+      "basic": {
+        "name": "Básico",
+        "price": "Gratis",
+        "desc": "Ideal para empezar a descubrir tu ciudad.",
+        "button": "Comenzar Gratis",
+        "features": [
+          "Explora eventos locales ilimitados",
+          "Participa en chats grupales de eventos",
+          "Guarda eventos en favoritos",
+          "Recibe notificaciones básicas",
+          "Crea hasta 2 eventos activos",
+          "Acceso estándar a la plataforma"
+        ]
+      },
+      "all_access": {
+        "name": "Acceso Total",
+        "price": "$9.99",
+        "desc": "La experiencia premium definitiva para organizadores y fans.",
+        "button": "Obtener Acceso Total",
+        "badge": "Mejor Opción",
+        "features": [
+          "Todo lo incluido en Básico",
+          "Crear eventos ilimitados",
+          "Eventos destacados en el inicio",
+          "Mayor visibilidad para organizadores",
+          "Estadísticas avanzadas de asistentes",
+          "Acceso prioritario a nuevas funciones",
+          "Soporte prioritario 24/7",
+          "Eliminación de anuncios",
+          "Perfil verificado para organizadores",
+          "Herramientas avanzadas de promoción"
+        ]
+      }
+    }
+  },
+  "event_detail": {
+    "about": "Sobre el evento",
+    "location": "Ubicación",
+    "organizer": "Organizador",
+    "amenities": "Servicios",
+    "reviews": "Reseñas",
+    "buy_ticket": "Comprar Ticket",
+    "get_ticket": "Obtener Entrada",
+    "free": "Gratis",
+    "sold_out": "Agotado",
+    "event_finished": "Evento Finalizado",
+    "chat_community": "Chat de la Comunidad",
+    "contact_organizer": "Contactar Organizador",
+    "view_map": "Ver Mapa",
+    "share_success": "¡Enlace copiado!",
+    "fav_added": "¡Añadido a favoritos!",
+    "fav_removed": "Eliminado de favoritos",
+    "follow_success": "¡Ahora sigues este evento!",
+    "unfollow_success": "Ya no sigues este evento",
+    "gallery_title": "Galería de Fotos",
+    "photos_count": "{{count}} Fotos",
+    "login_to_fav": "Inicia sesión para guardar favoritos",
+    "login_to_follow": "Inicia sesión para seguir este evento",
+    "login_to_chat": "Inicia sesión para entrar al chat",
+    "login_to_contact": "Inicia sesión para contactar al organizador",
+    "membership_required": "Necesitas una membresía activa para contactar organizadores",
+    "membership_desc": "Activa tu membresía ahora para desbloquear el chat directo.",
+    "membership_buy": "Comprar",
+    "self_chat_error": "No puedes iniciar un chat contigo mismo",
+    "ticket_owned": "Ya tienes una entrada para este evento",
+    "ticket_success": "¡Entrada obtenida con éxito! 🎉",
+    "attendees": "asistirán",
+    "friends_attending": "Gente que conoces",
+    "active_membership_for_chat": "Activa membresía para chat",
+    "contact": "Contactar",
+    "about_me": "Sobre mí",
+    "amenity_labels": {
+      "wifi": "WiFi",
+      "parking": "Parking",
+      "food": "Comida",
+      "music": "Música",
+      "ac": "Clima",
+      "drinks": "Bar",
+      "tv": "Pantallas",
+      "access": "Accesible"
+    },
+    "amenity_infos": {
+      "wifi": "Conexión a internet incluida",
+      "parking": "Estacionamiento disponible",
+      "food": "Opciones de comida",
+      "music": "Música en vivo o ambiental",
+      "ac": "Ambiente climatizado",
+      "drinks": "Bebidas disponibles",
+      "tv": "Pantallas de video",
+      "access": "Apto para silla de ruedas"
+    }
+  },
+  "onboarding": {
+    "title": "Personaliza tu Experiencia",
+    "subtitle": "Queremos conocerte mejor para mostrarte los mejores eventos",
+    "step_final": "Paso Final",
+    "complete_info": "Completa tu información para empezar",
+    "search_type": "¿Qué tipo de eventos buscas?",
+    "interests": "Tus intereses",
+    "selected": "{{count}} seleccionados (mín. 3)",
+    "start": "Comenzar mi aventura",
+    "free": "Gratis",
+    "paid": "De pago",
+    "both": "Ambas"
+  },
+  "tickets": {
+    "title": "Mis Tickets",
+    "loading": "Cargando tus tickets...",
+    "tabs": {
+      "active": "Próximos",
+      "past": "Pasados"
+    },
+    "clear_all": "Borrar todos",
+    "cleared_toast": "Todos los tickets han sido eliminados",
+    "purchased_on": "Comprado el",
+    "view_qr": "Ver QR",
+    "expired": "Expirado",
+    "empty": {
+      "active": {
+        "title": "¿Aún sin planes?",
+        "desc": "No tienes tickets activos por ahora. ¡Descubre los eventos más emocionantes y consigue los tuyos!",
+        "button": "Explorar Eventos"
+      },
+      "past": {
+        "title": "Sin historial",
+        "desc": "Aquí aparecerán tus entradas de eventos que ya han finalizado."
+      }
+    }
+  },
+  "auth": {
+    "title": "EVENTIA",
+    "subtitle": "Tu puerta a los mejores eventos locales",
+    "login": {
+      "tab": "Iniciar Sesión",
+      "title": "Bienvenido",
+      "desc": "Ingresa tus credenciales para acceder a tu perfil.",
+      "submit": "Entrar",
+      "forgot_password": "¿Olvidaste tu contraseña?",
+      "welcome_back": "¡Bienvenido de nuevo!",
+      "wrong_password": "Contraseña incorrecta. Por favor, inténtalo de nuevo.",
+      "invalid_credentials": "Error: Verifica tus credenciales o crea una cuenta nueva."
+    },
+    "signup": {
+      "tab": "Crear Cuenta",
+      "title": "Únete a Eventia",
+      "desc": "Crea tu cuenta para empezar a descubrir y crear eventos.",
+      "submit": "Registrarse",
+      "full_name": "Nombre Completo",
+      "success_auto": "¡Cuenta creada automáticamente! Bienvenido.",
+      "success_onboarding": "¡Cuenta creada! Personalicemos tu perfil."
+    },
+    "fields": {
+      "email": "Correo Electrónico",
+      "password": "Contraseña",
+      "email_placeholder": "tu@email.com",
+      "name_placeholder": "Juan Pérez"
+    }
+  }
+}

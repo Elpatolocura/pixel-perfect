@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, ArrowRight, Ticket, Calendar, MapPin, QrCode, MoreVertical, Trash2, Sparkles, Loader2 } from 'lucide-react';
 import { mockTickets, mockEvents } from '@/data/mockData';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,6 +18,7 @@ import { supabase } from '@/lib/supabase';
 
 const MyTicketsPage = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,10 +55,10 @@ const MyTicketsPage = () => {
         const { error } = await supabase.from('tickets').delete().eq('user_id', user.id);
         if (error) throw error;
         setTickets([]);
-        toast.success('Todos los tickets han sido eliminados');
+        toast.success(t('tickets.cleared_toast'));
       }
     } catch (e) {
-      toast.error('No se pudieron borrar los tickets');
+      toast.error(t('common.error'));
     }
   };
 
@@ -64,7 +66,7 @@ const MyTicketsPage = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center pb-24">
         <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground font-medium">Cargando tus tickets...</p>
+        <p className="text-muted-foreground font-medium">{t('tickets.loading')}</p>
       </div>
     );
   }
@@ -77,21 +79,21 @@ const MyTicketsPage = () => {
           <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-secondary transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-xl font-bold">Mis Tickets</h1>
+          <h1 className="text-xl font-bold">{t('tickets.title')}</h1>
         </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="p-2 rounded-xl hover:bg-secondary transition-all active:scale-90">
-              <MoreVertical className="w-5 h-5 text-slate-500" />
+              <MoreVertical className="w-5 h-5 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 shadow-xl border-slate-100">
+          <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 shadow-xl border-border bg-card">
             <DropdownMenuItem
               onClick={clearAllTickets}
-              className="gap-3 px-4 py-3 rounded-xl cursor-pointer font-bold text-[13px] text-rose-500 hover:bg-rose-50 focus:bg-rose-50 focus:text-rose-600"
+              className="gap-3 px-4 py-3 rounded-xl cursor-pointer font-bold text-[13px] text-rose-500 hover:bg-rose-500/10 focus:bg-rose-500/10 focus:text-rose-600"
             >
-              <Trash2 className="w-4 h-4" /> Borrar todos
+              <Trash2 className="w-4 h-4" /> {t('tickets.clear_all')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -100,8 +102,8 @@ const MyTicketsPage = () => {
       <div className="p-4">
         <Tabs defaultValue="active" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6 bg-secondary/50">
-            <TabsTrigger value="active">Próximos</TabsTrigger>
-            <TabsTrigger value="past">Pasados</TabsTrigger>
+            <TabsTrigger value="active">{t('tickets.tabs.active')}</TabsTrigger>
+            <TabsTrigger value="past">{t('tickets.tabs.past')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="active" className="space-y-4">
@@ -131,7 +133,7 @@ const MyTicketsPage = () => {
                       <div className="space-y-1">
                         <div className="flex items-center gap-1.5 text-muted-foreground">
                           <Calendar className="w-3 h-3" />
-                          <span className="text-[10px]">{new Date(events.event_date || events.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}</span>
+                          <span className="text-[10px]">{new Date(events.event_date || events.date).toLocaleDateString()}</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-muted-foreground">
                           <MapPin className="w-3 h-3" />
@@ -140,8 +142,8 @@ const MyTicketsPage = () => {
                       </div>
 
                       <div className="pt-2 flex justify-between items-center">
-                        <p className="text-[9px] text-muted-foreground italic">Comprado el {new Date(purchase_date).toLocaleDateString()}</p>
-                        <button className="text-[10px] font-bold text-primary group-hover:underline">Ver QR</button>
+                        <p className="text-[9px] text-muted-foreground italic">{t('tickets.purchased_on')} {new Date(purchase_date).toLocaleDateString()}</p>
+                        <button className="text-[10px] font-bold text-primary group-hover:underline">{t('tickets.view_qr')}</button>
                       </div>
                     </CardContent>
                   </div>
@@ -160,16 +162,16 @@ const MyTicketsPage = () => {
                   </div>
                 </div>
 
-                <h3 className="text-3xl font-black text-slate-900 tracking-tight mb-3">¿Aún sin planes?</h3>
-                <p className="text-slate-500 text-[16px] font-medium leading-relaxed max-w-[280px] mx-auto mb-10">
-                  No tienes tickets activos por ahora. ¡Descubre los eventos más emocionantes y consigue los tuyos!
+                <h3 className="text-3xl font-black text-foreground tracking-tight mb-3">{t('tickets.empty.active.title')}</h3>
+                <p className="text-muted-foreground text-[16px] font-medium leading-relaxed max-w-[280px] mx-auto mb-10">
+                  {t('tickets.empty.active.desc')}
                 </p>
 
                 <Button
                   onClick={() => navigate('/')}
                   className="w-full max-w-xs h-16 rounded-[24px] bg-gradient-to-r from-violet-600 via-fuchsia-600 to-rose-500 text-white font-black text-sm uppercase tracking-widest shadow-2xl shadow-fuchsia-500/30 active:scale-95 transition-all hover:shadow-fuchsia-500/50 group border-none"
                 >
-                  Explorar Eventos
+                  {t('tickets.empty.active.button')}
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </div>
@@ -180,18 +182,18 @@ const MyTicketsPage = () => {
             {pastTickets.length > 0 ? (
               <div className="space-y-4 opacity-70 grayscale-[0.3]">
                 {pastTickets.map(({ id, events, quantity, purchase_date }) => (
-                  <Card key={id} className="overflow-hidden border-none shadow-sm bg-slate-50/50">
+                  <Card key={id} className="overflow-hidden border-border shadow-sm bg-secondary/30">
                     <CardContent className="p-0 flex h-32">
-                      <div className="w-24 bg-slate-200 flex flex-col items-center justify-center gap-2 relative">
+                      <div className="w-24 bg-secondary/50 flex flex-col items-center justify-center gap-2 relative">
                         <span className="text-xl opacity-50">{events.emoji}</span>
-                        <div className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Expirado</div>
+                        <div className="text-[8px] font-bold text-muted-foreground uppercase tracking-tighter">{t('tickets.expired')}</div>
                       </div>
                       <div className="flex-1 p-4 flex flex-col justify-between">
                         <div>
-                          <h3 className="font-bold text-sm text-slate-600 line-clamp-1">{events.title}</h3>
-                          <p className="text-[10px] text-slate-400">{new Date(events.event_date || events.date).toLocaleDateString()}</p>
+                          <h3 className="font-bold text-sm text-foreground/60 line-clamp-1">{events.title}</h3>
+                          <p className="text-[10px] text-muted-foreground/50">{new Date(events.event_date || events.date).toLocaleDateString()}</p>
                         </div>
-                        <div className="text-[9px] text-slate-400 italic">ID: {id.slice(0,8)}</div>
+                        <div className="text-[9px] text-muted-foreground/40 italic">ID: {id.slice(0,8)}</div>
                       </div>
                     </CardContent>
                   </Card>
@@ -201,14 +203,14 @@ const MyTicketsPage = () => {
               <div className="flex flex-col items-center justify-center py-24 px-10 text-center animate-in fade-in slide-in-from-bottom-8 duration-1000">
                 <div className="relative mb-8">
                   <div className="absolute inset-0 bg-gradient-to-tr from-amber-400 via-orange-500 to-red-500 rounded-[32px] blur-2xl opacity-20"></div>
-                  <div className="relative w-24 h-24 bg-gradient-to-br from-slate-100 to-slate-200 rounded-[32px] flex items-center justify-center shadow-inner overflow-hidden border border-slate-200">
-                    <Ticket className="w-10 h-10 text-slate-300 -rotate-12" />
+                  <div className="relative w-24 h-24 bg-secondary rounded-[32px] flex items-center justify-center shadow-inner overflow-hidden border border-border">
+                    <Ticket className="w-10 h-10 text-muted-foreground/30 -rotate-12" />
                     <div className="absolute inset-0 bg-gradient-to-tr from-amber-400/20 to-orange-500/20 mix-blend-overlay"></div>
                     <Sparkles className="absolute top-2 right-2 w-6 h-6 text-amber-400/40" />
                   </div>
                 </div>
-                <h3 className="text-2xl font-black text-slate-800 tracking-tight">Sin historial</h3>
-                <p className="text-slate-500 text-[15px] mt-3 font-medium max-w-[220px] leading-relaxed">Aquí aparecerán tus entradas de eventos que ya han finalizado.</p>
+                <h3 className="text-2xl font-black text-foreground tracking-tight">{t('tickets.empty.past.title')}</h3>
+                <p className="text-muted-foreground text-[15px] mt-3 font-medium max-w-[220px] leading-relaxed">{t('tickets.empty.past.desc')}</p>
               </div>
             )}
           </TabsContent>

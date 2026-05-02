@@ -38,6 +38,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 const MessageBubble = ({ 
   msg, 
@@ -56,6 +57,7 @@ const MessageBubble = ({
   onScrollToMessage: (id: number) => void,
   onProfileLongPress: (userId: string) => void
 }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const CHAR_LIMIT = 200;
@@ -93,6 +95,7 @@ const MessageBubble = ({
           onMouseLeave={handleEnd}
           onTouchStart={handleStart}
           onTouchEnd={handleEnd}
+          onClick={() => openUserProfile(msg)}
           className="w-11 h-11 rounded-[20px] overflow-hidden shadow-lg border-2 border-white shrink-0 mb-1 active:scale-95 active:opacity-80 transition-all cursor-pointer"
         >
           <img src={msg.avatar} alt={msg.user} className="w-full h-full object-cover select-none pointer-events-none" />
@@ -111,8 +114,8 @@ const MessageBubble = ({
           <ContextMenuTrigger asChild>
             <div className={`rounded-[24px] text-[13px] font-medium leading-relaxed shadow-sm break-words overflow-hidden relative z-10 select-none cursor-pointer min-w-0 max-w-full ${
               msg.isMe 
-              ? 'bg-slate-900/75 backdrop-blur-md text-white rounded-br-sm shadow-slate-900/10' 
-              : 'bg-white/90 backdrop-blur-md text-slate-600 rounded-bl-sm border border-slate-100/50'
+              ? 'bg-primary text-white rounded-br-sm shadow-primary/10' 
+              : 'bg-card text-foreground rounded-bl-sm border border-border/50'
             }`}>
 
           {msg.replyTo && (
@@ -124,13 +127,13 @@ const MessageBubble = ({
               className={`p-2.5 m-2 mb-0 rounded-xl text-[11px] border-l-[3px] overflow-hidden flex flex-col min-w-0 cursor-pointer hover:opacity-80 transition-opacity ${
                 msg.isMe 
                   ? 'bg-white/10 border-white/30 text-white/90' 
-                  : 'bg-slate-50 border-primary/40 text-slate-600'
+                  : 'bg-secondary border-primary/40 text-foreground/70'
               }`}
             >
               <div className="flex items-center gap-1.5 mb-1">
                 <div className={`w-1 h-1 rounded-full ${msg.isMe ? 'bg-white/50' : 'bg-primary'}`}></div>
                 <span className={`font-black uppercase tracking-widest text-[9px] ${msg.isMe ? 'text-white/60' : 'text-primary'}`}>
-                  {msg.replyTo.user || (msg.replyTo.isMe ? 'Tú' : 'Usuario')}
+                  {msg.replyTo.user || (msg.replyTo.isMe ? t('chat_room.you') : 'Usuario')}
                 </span>
               </div>
               <span className="truncate italic opacity-80 leading-snug">
@@ -177,10 +180,10 @@ const MessageBubble = ({
               </div>
               
               <div className="flex items-center justify-end gap-1.5 mt-1 -mr-1">
-                <span className={`text-[9px] font-black uppercase tracking-widest ${msg.isMe ? 'text-white/40' : 'text-slate-300'}`}>
+                <span className={`text-[9px] font-black uppercase tracking-widest ${msg.isMe ? 'text-white/60' : 'text-muted-foreground'}`}>
                   {msg.time}
                 </span>
-                {msg.isMe && <span className="text-primary text-[10px] font-black">✓✓</span>}
+                {msg.isMe && <span className="text-white text-[10px] font-black">✓✓</span>}
               </div>
 
               {isLongMessage && (
@@ -190,55 +193,55 @@ const MessageBubble = ({
                     msg.isMe ? 'text-white/50 hover:text-white' : 'text-primary hover:text-primary/80'
                   }`}
                 >
-                  {isExpanded ? 'Ver menos' : 'Ver más'}
+                  {isExpanded ? t('chat_room.view_less') : t('chat_room.view_more')}
                 </button>
               )}
             </div>
           )}
         </div>
           </ContextMenuTrigger>
-          <ContextMenuContent className="w-56 rounded-2xl border-slate-100 shadow-xl p-2">
+          <ContextMenuContent className="w-56 rounded-2xl border-border bg-card shadow-xl p-2">
             <ContextMenuItem 
               onClick={() => onReply(msg)}
-              className="px-4 py-2.5 rounded-xl hover:bg-slate-50 focus:bg-slate-50 cursor-pointer text-[13px] font-bold text-slate-700 flex items-center gap-3"
+              className="px-4 py-2.5 rounded-xl hover:bg-secondary focus:bg-secondary cursor-pointer text-[13px] font-bold text-foreground flex items-center gap-3"
             >
-              <Reply className="w-4 h-4 text-slate-400" /> Responder
+              <Trash2 className="w-4 h-4 text-slate-400" /> {t('chat_room.reply')}
             </ContextMenuItem>
             <ContextMenuItem 
               onClick={() => {
                 if (msg.text) {
                   navigator.clipboard.writeText(msg.text);
-                  toast.success('Mensaje copiado al portapapeles');
+                  toast.success(t('chat_room.copied'));
                 } else {
-                  toast.error('No hay texto para copiar');
+                  toast.error(t('chat_room.no_text_copy'));
                 }
               }}
-              className="px-4 py-2.5 rounded-xl hover:bg-slate-50 focus:bg-slate-50 cursor-pointer text-[13px] font-bold text-slate-700 flex items-center gap-3"
+              className="px-4 py-2.5 rounded-xl hover:bg-secondary focus:bg-secondary cursor-pointer text-[13px] font-bold text-foreground flex items-center gap-3"
             >
-              <Copy className="w-4 h-4 text-slate-400" /> Copiar texto
+              <Copy className="w-4 h-4 text-slate-400" /> {t('chat_room.copy_text')}
             </ContextMenuItem>
             <ContextMenuItem 
-              onClick={() => toast.success('Función de reenviar próximamente')}
-              className="px-4 py-2.5 rounded-xl hover:bg-slate-50 focus:bg-slate-50 cursor-pointer text-[13px] font-bold text-slate-700 flex items-center gap-3"
+              onClick={() => toast.success(t('chat_room.forward_soon'))}
+              className="px-4 py-2.5 rounded-xl hover:bg-secondary focus:bg-secondary cursor-pointer text-[13px] font-bold text-foreground flex items-center gap-3"
             >
-              <Forward className="w-4 h-4 text-slate-400" /> Reenviar
+              <Forward className="w-4 h-4 text-slate-400" /> {t('chat_room.forward')}
             </ContextMenuItem>
             
-            <ContextMenuSeparator className="my-1 bg-slate-100" />
+            <ContextMenuSeparator className="my-1 bg-border" />
 
             {msg.isMe ? (
               <ContextMenuItem 
                 onClick={() => onDelete(msg.id)}
                 className="px-4 py-2.5 rounded-xl hover:bg-rose-50 focus:bg-rose-50 cursor-pointer text-[13px] font-bold text-rose-500 flex items-center gap-3"
               >
-                <Trash2 className="w-4 h-4" /> Eliminar
+                <Trash2 className="w-4 h-4" /> {t('common.delete')}
               </ContextMenuItem>
             ) : (
               <ContextMenuItem 
-                onClick={() => toast.error('Mensaje reportado a los moderadores')}
+                onClick={() => toast.error(t('chat_room.reported'))}
                 className="px-4 py-2.5 rounded-xl hover:bg-rose-50 focus:bg-rose-50 cursor-pointer text-[13px] font-bold text-rose-500 flex items-center gap-3"
               >
-                <ShieldAlert className="w-4 h-4" /> Reportar
+                <ShieldAlert className="w-4 h-4" /> {t('chat_room.report')}
               </ContextMenuItem>
             )}
           </ContextMenuContent>
@@ -251,6 +254,7 @@ const MessageBubble = ({
 };
 
 const ChatRoomPage = () => {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const [message, setMessage] = useState('');
@@ -309,7 +313,7 @@ const ChatRoomPage = () => {
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [roomInfo, setRoomInfo] = useState<any>(null);
-  const [accessStatus, setAccessStatus] = useState<'checking' | 'granted' | 'denied_ticket' | 'denied_follow'>('checking');
+  const [accessStatus, setAccessStatus] = useState<'checking' | 'granted' | 'denied_ticket'>('checking');
   const [deniedEventId, setDeniedEventId] = useState<string | null>(null);
   const [recentFollowers, setRecentFollowers] = useState<any[]>([]);
 
@@ -353,23 +357,7 @@ const ChatRoomPage = () => {
 
         if (roomError) throw roomError;
 
-        // If it's a private chat, get the other user's profile
-        if (room.type === 'private') {
-          const otherMember = room.chat_room_members.find((m: any) => m.user_id !== authUser.id);
-          
-          if (otherMember) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('full_name, avatar_url')
-              .eq('id', otherMember.user_id)
-              .single();
-            
-            if (profile) {
-              room.name = profile.full_name || 'Usuario';
-              room.avatar = profile.avatar_url;
-            }
-          }
-        } else if (room.type === 'event' && room.events) {
+        if (room.type === 'event' && room.events) {
           // Use event details for the room info
           room.name = room.events.title;
           room.avatar = room.events.image_url;
@@ -395,29 +383,6 @@ const ChatRoomPage = () => {
               setAccessStatus('denied_ticket');
               setLoading(false);
               return;
-            }
-          }
-        } else if (room.type === 'private') {
-          // If the user is already a member of this room (was added when the chat was created),
-          // grant access immediately — no follow check needed.
-          const alreadyMember = room.chat_room_members?.some((m: any) => m.user_id === authUser.id);
-
-          if (!alreadyMember) {
-            // User is NOT a member: check if they follow the other person
-            const otherMember = room.chat_room_members?.find((m: any) => m.user_id !== authUser.id);
-            if (otherMember) {
-              const { data: follow } = await supabase
-                .from('follows')
-                .select('id')
-                .eq('follower_id', authUser.id)
-                .eq('following_id', otherMember.user_id)
-                .maybeSingle();
-
-              if (!follow) {
-                setAccessStatus('denied_follow');
-                setLoading(false);
-                return;
-              }
             }
           }
         }
@@ -496,7 +461,7 @@ const ChatRoomPage = () => {
         setChatMessages(formattedMessages);
       } catch (error) {
         console.error("Error fetching chat data", error);
-        toast.error('Error al cargar el chat');
+        toast.error(t('chat_room.error_loading'));
       } finally {
         setLoading(false);
       }
@@ -563,7 +528,7 @@ const ChatRoomPage = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error('Inicia sesión para enviar mensajes');
+        toast.error(t('chat_room.login_to_send'));
         return;
       }
 
@@ -586,7 +551,7 @@ const ChatRoomPage = () => {
       }
     } catch (error) {
       console.error("Error sending message", error);
-      toast.error('No se pudo enviar el mensaje');
+      toast.error(t('chat_room.error_send'));
     }
   };
 
@@ -632,12 +597,12 @@ const ChatRoomPage = () => {
 
   const handleDeleteMessage = (id: number) => {
     setChatMessages(prev => prev.filter(m => m.id !== id));
-    toast.success('Mensaje eliminado');
+    toast.success(t('chat_room.deleted'));
   };
 
   const openUserProfile = (user: any) => {
     if (user.isMe) return;
-    setSelectedUser(user);
+    navigate(`/profile/u/${user.sender_id}`);
   };
 
   const scrollToMessage = (msgId: number) => {
@@ -656,9 +621,9 @@ const ChatRoomPage = () => {
 
   if (loading) {
     return (
-      <div className="h-screen bg-slate-50 flex flex-col items-center justify-center">
+      <div className="h-screen bg-background flex flex-col items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
-        <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Cargando chat...</p>
+        <p className="text-muted-foreground font-bold uppercase tracking-widest text-[10px]">{t('chat_room.loading')}</p>
       </div>
     );
   }
@@ -666,40 +631,40 @@ const ChatRoomPage = () => {
   // ── ACCESS DENIED: No ticket ────────────────────────────────────────
   if (accessStatus === 'denied_ticket') {
     return (
-      <div className="h-screen bg-[#F8FAFC] flex flex-col">
-        <header className="px-6 py-5 bg-white border-b border-slate-100 flex items-center gap-4 shadow-sm shrink-0">
-          <button onClick={() => navigate(-1)} className="p-2.5 rounded-2xl hover:bg-slate-50 transition-all">
-            <ArrowLeft className="w-5 h-5 text-slate-900" />
+      <div className="h-screen bg-background flex flex-col">
+        <header className="px-6 py-5 bg-background border-b border-border flex items-center gap-4 shadow-sm shrink-0">
+          <button onClick={() => navigate(-1)} className="p-2.5 rounded-2xl hover:bg-secondary transition-all">
+            <ArrowLeft className="w-5 h-5 text-foreground" />
           </button>
-          <h1 className="text-[15px] font-black text-slate-900">Chat del Evento</h1>
+          <h1 className="text-[15px] font-black text-foreground">{t('chat_room.event_chat')}</h1>
         </header>
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-          <div className="w-24 h-24 rounded-[32px] bg-amber-50 border border-amber-100 flex items-center justify-center mb-6 shadow-inner">
-            <Ticket className="w-12 h-12 text-amber-400" />
+          <div className="w-24 h-24 rounded-[32px] bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-6 shadow-inner">
+            <Ticket className="w-12 h-12 text-amber-500" />
           </div>
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
             style={{ backgroundImage: `repeating-linear-gradient(45deg, #f59e0b 0, #f59e0b 1px, transparent 0, transparent 50%)`, backgroundSize: '20px 20px' }}
           />
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Acceso Bloqueado</h2>
-          <p className="text-slate-500 text-[14px] font-medium leading-relaxed mb-2 max-w-xs">
-            Necesitas un <strong className="text-slate-700">ticket válido</strong> para participar en el chat grupal de este evento.
+          <h2 className="text-2xl font-black text-foreground tracking-tight mb-3">{t('chat_room.access_blocked')}</h2>
+          <p className="text-muted-foreground text-[14px] font-medium leading-relaxed mb-2 max-w-xs">
+            {t('chat_room.ticket_access_desc')}
           </p>
-          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-10">
-            El chat se activa automáticamente al obtener tu entrada
+          <p className="text-muted-foreground/60 text-[11px] font-bold uppercase tracking-widest mb-10">
+            {t('chat_room.ticket_access_hint')}
           </p>
           <div className="w-full max-w-xs space-y-3">
             <Button
               onClick={() => navigate(deniedEventId ? `/event/${deniedEventId}` : '/')}
               className="w-full h-14 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black uppercase tracking-widest text-[11px] shadow-xl shadow-amber-500/20"
             >
-              <Ticket className="w-4 h-4 mr-2" /> Obtener Mi Ticket
+              <Ticket className="w-4 h-4 mr-2" /> {t('chat_room.get_ticket')}
             </Button>
             <Button
               variant="outline"
               onClick={() => navigate(-1)}
-              className="w-full h-12 rounded-2xl border-slate-200 font-bold text-slate-600 text-[12px]"
+              className="w-full h-12 rounded-2xl border-border font-bold text-foreground text-[12px] bg-background hover:bg-secondary"
             >
-              Volver
+              {t('common.back')}
             </Button>
           </div>
         </div>
@@ -707,75 +672,29 @@ const ChatRoomPage = () => {
     );
   }
 
-  // ── ACCESS DENIED: No mutual follow ────────────────────────────────
-  if (accessStatus === 'denied_follow') {
-    return (
-      <div className="h-screen bg-[#F8FAFC] flex flex-col">
-        <header className="px-6 py-5 bg-white border-b border-slate-100 flex items-center gap-4 shadow-sm shrink-0">
-          <button onClick={() => navigate(-1)} className="p-2.5 rounded-2xl hover:bg-slate-50 transition-all">
-            <ArrowLeft className="w-5 h-5 text-slate-900" />
-          </button>
-          <h1 className="text-[15px] font-black text-slate-900">Chat Privado</h1>
-        </header>
-        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-          <div className="w-24 h-24 rounded-[32px] bg-slate-100 border border-slate-200 flex items-center justify-center mb-6 shadow-inner">
-            <Lock className="w-12 h-12 text-slate-400" />
-          </div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Chat Bloqueado</h2>
-          <p className="text-slate-500 text-[14px] font-medium leading-relaxed mb-2 max-w-xs">
-            Para chatear en privado, <strong className="text-slate-700">ambos usuarios deben seguirse mutuamente</strong>.
-          </p>
-          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-10">
-            Sigue a este usuario y espera a que te siga de vuelta
-          </p>
-          <div className="w-full max-w-xs space-y-3">
-            <Button
-              onClick={() => {
-                const otherMember = roomInfo?.chat_room_members?.find((m: any) => m.user_id !== currentUserIdRef.current);
-                if (otherMember) {
-                  navigate(`/profile/${otherMember.user_id}`);
-                } else {
-                  navigate(-1);
-                }
-              }}
-              className="w-full h-14 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-widest text-[11px] shadow-xl shadow-slate-900/10"
-            >
-              <UserPlus className="w-4 h-4 mr-2" /> Ir al Perfil del Usuario
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate('/chat')}
-              className="w-full h-12 rounded-2xl border-slate-200 font-bold text-slate-600 text-[12px]"
-            >
-              Ver Mis Chats
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // DENIED FOLLOW REMOVED
 
   return (
-    <div className="flex flex-col h-screen bg-[#F8FAFC] overflow-hidden animate-fade-in">
+    <div className="flex flex-col h-screen bg-background overflow-hidden animate-fade-in">
       {/* Chat Header */}
-      <header className="px-6 py-5 bg-white border-b border-slate-100 flex items-center justify-between shadow-sm z-20 shrink-0">
+      <header className="px-6 py-5 bg-background border-b border-border flex items-center justify-between shadow-sm z-20 shrink-0">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="p-2.5 rounded-2xl hover:bg-slate-50 transition-all active:scale-90">
-            <ArrowLeft className="w-5 h-5 text-slate-900" />
+          <button onClick={() => navigate(-1)} className="p-2.5 rounded-2xl hover:bg-secondary transition-all active:scale-90">
+            <ArrowLeft className="w-5 h-5 text-foreground" />
           </button>
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-black shadow-lg shadow-slate-900/10 overflow-hidden">
+              <div className="w-12 h-12 rounded-2xl bg-foreground flex items-center justify-center text-background font-black shadow-lg shadow-black/10 overflow-hidden">
                 {roomInfo?.avatar ? (
                   <img src={roomInfo.avatar} alt={roomInfo.name} className="w-full h-full object-cover" />
                 ) : (
                   (roomInfo?.name || 'C').charAt(0).toUpperCase()
                 )}
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-background rounded-full"></div>
             </div>
             <div>
-              <h1 className="text-[15px] font-black text-slate-900 leading-none mb-1.5 truncate max-w-[150px] sm:max-w-[200px]">
+              <h1 className="text-[15px] font-black text-foreground leading-none mb-1.5 truncate max-w-[150px] sm:max-w-[200px]">
                 {roomInfo?.name || 'Chat'}
               </h1>
               <div className="flex items-center gap-2">
@@ -787,7 +706,7 @@ const ChatRoomPage = () => {
                 ) : (
                   <div className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                    <p className="text-[10px] text-green-600 font-bold uppercase tracking-widest">En línea</p>
+                    <p className="text-[10px] text-green-600 font-bold uppercase tracking-widest">{t('chat_room.online')}</p>
                   </div>
                 )}
               </div>
@@ -796,25 +715,25 @@ const ChatRoomPage = () => {
         </div>
         <Popover>
           <PopoverTrigger asChild>
-            <button className="p-2.5 rounded-2xl hover:bg-slate-50 transition-all active:scale-95">
-              <MoreVertical className="w-5 h-5 text-slate-400" />
+            <button className="p-2.5 rounded-2xl hover:bg-secondary transition-all active:scale-95">
+              <MoreVertical className="w-5 h-5 text-muted-foreground" />
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-56 p-2 rounded-[20px] border-slate-100 shadow-xl" align="end">
+          <PopoverContent className="w-56 p-2 rounded-[20px] border-border bg-card shadow-xl" align="end">
             <div className="flex flex-col">
               <button 
                 onClick={() => toast.success('Función de búsqueda próximamente')}
-                className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 transition-colors text-[13px] font-bold text-slate-700 flex items-center gap-3"
+                className="w-full text-left px-4 py-3 rounded-xl hover:bg-secondary transition-colors text-[13px] font-bold text-foreground flex items-center gap-3"
               >
-                <Search className="w-4 h-4 text-slate-400" /> Buscar en el chat
+                <Search className="w-4 h-4 text-muted-foreground" /> Buscar en el chat
               </button>
               <button 
                 onClick={() => toast.success('Notificaciones silenciadas por 8 horas')}
-                className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 transition-colors text-[13px] font-bold text-slate-700 flex items-center gap-3"
+                className="w-full text-left px-4 py-3 rounded-xl hover:bg-secondary transition-colors text-[13px] font-bold text-foreground flex items-center gap-3"
               >
-                <BellOff className="w-4 h-4 text-slate-400" /> Silenciar chat
+                <BellOff className="w-4 h-4 text-muted-foreground" /> Silenciar chat
               </button>
-              <div className="h-px w-full bg-slate-100 my-1"></div>
+              <div className="h-px w-full bg-border my-1"></div>
               <button 
                 onClick={() => toast.error('Chat reportado al equipo de soporte')}
                 className="w-full text-left px-4 py-3 rounded-xl hover:bg-rose-50 hover:text-rose-600 transition-colors text-[13px] font-bold text-rose-500 flex items-center gap-3"
@@ -838,7 +757,7 @@ const ChatRoomPage = () => {
         />
 
         <div className="flex justify-center my-4 relative z-10">
-          <span className="px-5 py-2 bg-white/50 backdrop-blur-sm border border-slate-100/50 rounded-full text-[9px] font-black text-slate-400 uppercase tracking-[0.25em] shadow-sm">
+          <span className="px-5 py-2 bg-secondary/50 backdrop-blur-sm border border-border rounded-full text-[9px] font-black text-muted-foreground uppercase tracking-[0.25em] shadow-sm">
             Conversación de hoy
           </span>
         </div>
@@ -846,10 +765,10 @@ const ChatRoomPage = () => {
         {/* Recent Followers Strip — only for event rooms */}
         {roomInfo?.type === 'event' && recentFollowers.length > 0 && (
           <div className="relative z-10 -mx-6 px-6">
-            <div className="bg-white/60 backdrop-blur-sm border border-slate-100/60 rounded-3xl p-4 mb-2 shadow-sm">
+            <div className="bg-card/60 backdrop-blur-sm border border-border/50 rounded-3xl p-4 mb-2 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-300" />
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Siguiendo este evento</p>
+                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Siguiendo este evento</p>
               </div>
               <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
                 {recentFollowers.map((follower) => (
@@ -858,7 +777,7 @@ const ChatRoomPage = () => {
                     onClick={() => navigate(`/profile/u/${follower.id}`)}
                     className="flex flex-col items-center gap-1.5 shrink-0 group"
                   >
-                    <div className="w-11 h-11 rounded-[16px] overflow-hidden border-2 border-white shadow-md group-hover:scale-110 group-hover:shadow-lg transition-all bg-primary/10">
+                    <div className="w-11 h-11 rounded-[16px] overflow-hidden border-2 border-background shadow-md group-hover:scale-110 group-hover:shadow-lg transition-all bg-primary/10">
                       {follower.avatar ? (
                         <img src={follower.avatar} alt={follower.name} className="w-full h-full object-cover" />
                       ) : (
@@ -867,7 +786,7 @@ const ChatRoomPage = () => {
                         </div>
                       )}
                     </div>
-                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-wide max-w-[52px] text-center leading-tight truncate group-hover:text-primary transition-colors">
+                    <p className="text-[8px] font-black text-muted-foreground uppercase tracking-wide max-w-[52px] text-center leading-tight truncate group-hover:text-primary transition-colors">
                       {follower.name.split(' ')[0]}
                     </p>
                   </button>
@@ -892,16 +811,16 @@ const ChatRoomPage = () => {
       </div>
 
       {/* Chat Input */}
-      <footer className="bg-white p-4 pb-6 sm:p-6 sm:pb-8 flex flex-col gap-3 shrink-0 z-20 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)] border-t border-slate-100">
+      <footer className="bg-background p-4 pb-6 sm:p-6 sm:pb-8 flex flex-col gap-3 shrink-0 z-20 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] border-t border-border">
         
         {/* Reply Preview */}
         {replyingTo && (
-          <div className="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-100 animate-in slide-in-from-bottom-2 duration-300">
+          <div className="flex items-center justify-between bg-secondary p-3 rounded-2xl border border-border animate-in slide-in-from-bottom-2 duration-300">
             <div className="flex flex-col min-w-0 border-l-[3px] border-primary pl-3 flex-1">
               <span className="text-[11px] font-black text-primary uppercase tracking-widest mb-0.5">
                 Respondiendo a {replyingTo.isMe ? 'ti' : replyingTo.user || 'Usuario'}
               </span>
-              <span className="text-[13px] text-slate-500 truncate font-medium">
+              <span className="text-[13px] text-muted-foreground truncate font-medium">
                 {replyingTo.text || 'Archivo multimedia'}
               </span>
             </div>
@@ -1128,16 +1047,7 @@ const ChatRoomPage = () => {
                 >
                   {isFollowingUser ? 'Siguiendo' : 'Seguir'}
                 </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setSelectedUser(null);
-                    toast.success(`Iniciando chat privado con ${selectedUser?.user}...`);
-                  }} 
-                  className="w-12 h-12 rounded-2xl border-slate-100 flex items-center justify-center p-0 hover:bg-slate-50"
-                >
-                  <MessageCircle className="w-5 h-5 text-slate-900" />
-                </Button>
+                {/* Message Button Removed */}
               </div>
             </div>
           </div>

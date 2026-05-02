@@ -109,20 +109,20 @@ const NotificationsPage = () => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="p-2 rounded-xl hover:bg-secondary transition-all active:scale-90">
-              <MoreVertical className="w-5 h-5 text-slate-500" />
+              <MoreVertical className="w-5 h-5 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 shadow-xl border-slate-100">
+          <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 shadow-xl border-border bg-card">
             <DropdownMenuItem 
               onClick={markAllAsRead}
-              className="gap-3 px-4 py-3 rounded-xl cursor-pointer font-bold text-[13px] text-slate-700 hover:bg-slate-50"
+              className="gap-3 px-4 py-3 rounded-xl cursor-pointer font-bold text-[13px] text-foreground hover:bg-secondary focus:bg-secondary"
             >
               <CheckCheck className="w-4 h-4 text-emerald-500" /> Marcar como leídas
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="my-1 bg-slate-50" />
+            <DropdownMenuSeparator className="my-1 bg-border" />
             <DropdownMenuItem 
               onClick={clearAll}
-              className="gap-3 px-4 py-3 rounded-xl cursor-pointer font-bold text-[13px] text-rose-500 hover:bg-rose-50 focus:bg-rose-50 focus:text-rose-600"
+              className="gap-3 px-4 py-3 rounded-xl cursor-pointer font-bold text-[13px] text-rose-500 hover:bg-rose-500/10 focus:bg-rose-500/10 focus:text-rose-600"
             >
               <Trash2 className="w-4 h-4" /> Borrar todas
             </DropdownMenuItem>
@@ -170,14 +170,14 @@ const NotificationsPage = () => {
               </div>
             </div>
             
-            <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-3">¡Todo al día!</h3>
-            <p className="text-slate-500 text-[15px] font-medium leading-relaxed max-w-[240px] mx-auto mb-10">
+            <h3 className="text-2xl font-black text-foreground tracking-tight mb-3">¡Todo al día!</h3>
+            <p className="text-muted-foreground text-[15px] font-medium leading-relaxed max-w-[240px] mx-auto mb-10">
               No hay nuevas notificaciones. ¡Es un buen momento para explorar nuevos eventos!
             </p>
             
             <Button 
               onClick={() => navigate('/')}
-              className="w-full h-14 rounded-2xl bg-slate-900 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-slate-900/20 active:scale-95 transition-all hover:bg-orange-600 hover:shadow-orange-500/30 border-none"
+              className="w-full h-14 rounded-2xl bg-foreground text-background font-black text-sm uppercase tracking-widest shadow-xl shadow-foreground/10 active:scale-95 transition-all hover:opacity-90 border-none"
             >
               Explorar Eventos
             </Button>
